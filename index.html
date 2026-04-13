@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Agent.Work - AI 职业经纪人</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://unpkg.com/framer-motion@11/dist/framer-motion.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body, #root { width: 100%; height: 100%; }
+    body { font-family: 'Inter', -apple-system, system-ui, sans-serif; background: #000; color: #1D1D1F; -webkit-font-smoothing: antialiased; display:flex; justify-content:center; align-items:flex-start; }
+    ::-webkit-scrollbar { display: none; }
+    @keyframes ripple-anim { 0% { transform: scale(1); opacity: 0.4; } 100% { transform: scale(2.5); opacity: 0; } }
+    .animate-ripple { animation: ripple-anim 2s ease-out infinite; }
+    @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+    .animate-float { animation: float 3s ease-in-out infinite; }
+    @keyframes glow { 0%,100% { box-shadow: 0 0 20px rgba(0,122,255,0.15); } 50% { box-shadow: 0 0 40px rgba(0,122,255,0.3); } }
+    .animate-glow { animation: glow 2s ease-in-out infinite; }
+    @keyframes typing-dot { 0%,60%,100% { opacity:0.3; transform:translateY(0); } 30% { opacity:1; transform:translateY(-4px); } }
+    .typing-dot-1 { animation: typing-dot 1.4s ease-in-out infinite; }
+    .typing-dot-2 { animation: typing-dot 1.4s ease-in-out 0.2s infinite; }
+    .typing-dot-3 { animation: typing-dot 1.4s ease-in-out 0.4s infinite; }
+    @keyframes radar-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    @keyframes scan-line { 0% { opacity:0; transform: scaleY(0); } 50% { opacity:1; transform: scaleY(1); } 100% { opacity:0; transform: scaleY(0); } }
+    @keyframes subtle-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.85; transform: scale(1.03); } }
+    .animate-subtle-pulse { animation: subtle-pulse 2s ease-in-out infinite; }
+  </style>
+  <script>
+    tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter','-apple-system','system-ui','sans-serif'] } } } }
+  </script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+    const { motion, AnimatePresence } = window["framer-motion"] || (() => {
+      const M = (tag) => React.forwardRef((props, ref) => React.createElement(tag, {...props, ref}));
+      return { motion: new Proxy({}, { get: (_, tag) => M(tag) }), AnimatePresence: ({children}) => children };
+    })();
+
+    /* ============ SVG Ability Rings ============ */
+    function AbilityRings({ skills, size = 220 }) {
+      const cx = size/2, cy = size/2;
+      const [animVal, setAnimVal] = useState(0);
+      useEffect(() => {
+        let raf, start;
+        const run = (ts) => {
+          if(!start) start = ts;
+          const p = Math.min((ts - start) / 1400, 1);
+          const eased = 1 - Math.pow(1 - p, 3);
+          setAnimVal(eased);
+          if(p < 1) raf = requestAnimationFrame(run);
+        };
+        const t = setTimeout(() => { raf = requestAnimationFrame(run); }, 400);
+        return () => { clearTimeout(t); cancelAnimationFrame(raf); };
+      }, []);
+      const colors = [
+        ['#007AFF','#00C6FF'],
+        ['#5856D6','#AF52DE'],
+        ['#34C759','#30D158'],
+        ['#FF9500','#FF6B00'],
+        ['#FF2D55','#FF375F'],
+      ];
+      const ringWidth = 6;
+      const gap = 4;
+      return (
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+          <defs>
+            {colors.map((c, i) => (
+              <linearGradient key={i} id={`ring${i}`} x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor={c[0]}/><stop offset="100%" stopColor={c[1]}/>
+              </linearGradient>
+            ))}
+          </defs>
+          {skills.map((s, i) => {
+            const r = (size/2) - 20 - i * (ringWidth + gap);
+            const circumference = 2 * Math.PI * r;
+            const pct = (s.level / 100) * animVal;
+            const dashLen = circumference * pct;
+            const dashGap = circumference - dashLen;
+            return (
+              <g key={i}>
+                <circle cx={cx} cy={cy} r={r} fill="none" stroke="#F5F5F7" strokeWidth={ringWidth} />
+                <circle cx={cx} cy={cy} r={r} fill="none" stroke={`url(#ring${i})`} strokeWidth={ringWidth}
+                  strokeDasharray={`${dashLen} ${dashGap}`}
+                  strokeLinecap="round"
+                  transform={`rotate(-90 ${cx} ${cy})`}
+                  style={{filter:`drop-shadow(0 0 4px ${colors[i][0]}40)`}}
+                />
+              </g>
+            );
+          })}
+          <text x={cx} y={cy-8} textAnchor="middle" fontSize="26" fontWeight="700" fill="#1D1D1F">
+            {Math.round(skills.reduce((a,s)=>a+s.level,0)/skills.length * animVal)}
+          </text>
+          <text x={cx} y={cy+12} textAnchor="middle" fontSize="11" fill="#86868B">综合评分</text>
+        </svg>
+      );
+    }
+
+    /* ============ Icons ============ */
+    const IconArrowRight = () => (<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#86868B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>);
+    const IconUser = () => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>);
+    const IconBuilding = () => (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect width="16" height="20" x="4" y="2" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M16 6h.01M12 6h.01M12 10h.01M12 14h.01M16 10h.01M16 14h.01M8 10h.01M8 14h.01"/></svg>);
+    const IconHome = ({active}) => (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active?"#1D1D1F":"#86868B"} strokeWidth={active?2:1.5}><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>);
+    const IconSparkles = ({active}) => (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active?"#1D1D1F":"#86868B"} strokeWidth={active?2:1.5}><path d="m12 3-1.9 5.8a2 2 0 0 1-1.287 1.288L3 12l5.8 1.9a2 2 0 0 1 1.288 1.287L12 21l1.9-5.8a2 2 0 0 1 1.287-1.288L21 12l-5.8-1.9a2 2 0 0 1-1.288-1.287Z"/></svg>);
+    const IconMessage = ({active}) => (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active?"#1D1D1F":"#86868B"} strokeWidth={active?2:1.5}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>);
+    const IconUserTab = ({active}) => (<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active?"#1D1D1F":"#86868B"} strokeWidth={active?2:1.5}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>);
+    const IconRadar = () => (<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5"><path d="M19.07 4.93A10 10 0 0 0 6.99 3.34"/><path d="M4 6h.01"/><path d="M2.29 9.62A10 10 0 1 0 21.31 8.35"/><path d="M16.24 7.76A6 6 0 1 0 8.23 16.67"/><path d="M12 18h.01"/><circle cx="12" cy="12" r="2"/></svg>);
+
+    /* ============ Page: Landing ============ */
+    function LandingPage({ onNavigate }) {
+      return (
+        <div className="flex flex-col justify-center items-center min-h-screen px-6">
+          <motion.div className="text-center mb-16" initial={{opacity:0,y:-20}} animate={{opacity:1,y:0}} transition={{duration:0.6}}>
+            <h1 className="text-[28px] font-semibold tracking-tight text-[#1D1D1F]">Agent.Work</h1>
+            <p className="text-[14px] text-[#86868B] mt-2">重塑你的职业连接</p>
+          </motion.div>
+          <div className="w-full flex flex-col gap-4">
+            <motion.div className="w-full bg-white rounded-3xl border border-gray-100 p-6 cursor-pointer" style={{boxShadow:'0 8px 30px rgb(0,0,0,0.04)'}} initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{duration:0.5,delay:0.2}} whileTap={{scale:0.98}} onClick={()=>onNavigate('ob-upload')}>
+              <div className="flex items-start justify-between">
+                <div className="flex items-start gap-4">
+                  <div className="w-11 h-11 rounded-xl bg-[#F5F5F7] flex items-center justify-center flex-shrink-0 mt-0.5"><IconUser/></div>
+                  <div><h3 className="text-[17px] font-semibold text-[#1D1D1F]">我是求职者</h3><p className="text-[14px] text-[#86868B] mt-1.5 leading-relaxed">托管我的职业机会，让 Agent 替我谈判。</p></div>
+                </div>
+                <div className="mt-2 flex-shrink-0"><IconArrowRight/></div>
+              </div>
+            </motion.div>
+            <motion.div className="w-full bg-[#F5F5F7] rounded-3xl border border-gray-100 p-6 cursor-pointer" style={{boxShadow:'0 8px 30px rgb(0,0,0,0.04)'}} initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{duration:0.5,delay:0.35}} whileTap={{scale:0.98}}>
+              <div className="flex items-start justify-between">
+                <div className="flex items-start gap-4">
+                  <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center flex-shrink-0 mt-0.5"><IconBuilding/></div>
+                  <div><h3 className="text-[17px] font-semibold text-[#1D1D1F]">我是招聘方</h3><p className="text-[14px] text-[#86868B] mt-1.5 leading-relaxed">发布用人意图，获取精准人才镜像。</p></div>
+                </div>
+                <div className="mt-2 flex-shrink-0"><IconArrowRight/></div>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ============ OB Step 1: Upload Resume ============ */
+    function OBUpload({ onNavigate }) {
+      const [uploading, setUploading] = useState(false);
+      const [done, setDone] = useState(false);
+      const handleUpload = () => {
+        setUploading(true);
+        setTimeout(() => { setDone(true); setTimeout(() => onNavigate('ob-parse'), 800); }, 2000);
+      };
+      return (
+        <div className="flex flex-col items-center justify-center min-h-screen px-8 bg-[#FAFAFA]">
+          <motion.div className="text-center w-full" initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{duration:0.5}}>
+            <motion.div className="w-20 h-20 rounded-3xl bg-black flex items-center justify-center mx-auto mb-8" initial={{scale:0}} animate={{scale:1}} transition={{type:'spring',delay:0.2}}>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+            </motion.div>
+            <h1 className="text-[24px] font-semibold text-[#1D1D1F] mb-2">上传你的简历</h1>
+            <p className="text-[14px] text-[#86868B] leading-relaxed mb-12">这是你与经纪人合作的第一步</p>
+            {!uploading && !done && (
+              <motion.div className="w-full border-2 border-dashed border-gray-200 rounded-3xl p-10 cursor-pointer" onClick={handleUpload} whileTap={{scale:0.98}} initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{delay:0.4}}>
+                <div className="flex flex-col items-center gap-4">
+                  <div className="w-14 h-14 rounded-2xl bg-[#F5F5F7] flex items-center justify-center">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#86868B" strokeWidth="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  </div>
+                  <p className="text-[15px] text-[#86868B]">点击选择简历文件</p>
+                  <p className="text-[12px] text-[#C7C7CC]">支持 PDF / Word 格式</p>
+                </div>
+              </motion.div>
+            )}
+            {uploading && !done && (
+              <motion.div className="w-full" initial={{opacity:0}} animate={{opacity:1}}>
+                <div className="flex items-center gap-3 bg-white rounded-2xl border border-gray-100 p-4 mb-4" style={{boxShadow:'0 4px 15px rgb(0,0,0,0.04)'}}>
+                  <div className="w-10 h-10 rounded-xl bg-black/5 flex items-center justify-center">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1D1D1F" strokeWidth="1.5"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[14px] font-medium text-[#1D1D1F] truncate">Java后端开发_张明远_2025.pdf</p>
+                    <p className="text-[12px] text-[#86868B]">3.2 MB</p>
+                  </div>
+                </div>
+                <div className="w-full h-1 bg-[#F5F5F7] rounded-full overflow-hidden">
+                  <motion.div className="h-full bg-black rounded-full" initial={{width:'0%'}} animate={{width:'100%'}} transition={{duration:1.8,ease:'easeInOut'}}/>
+                </div>
+                <p className="text-[13px] text-[#86868B] mt-3">正在上传...</p>
+              </motion.div>
+            )}
+            {done && (
+              <motion.div className="flex flex-col items-center gap-3" initial={{opacity:0,scale:0.9}} animate={{opacity:1,scale:1}}>
+                <div className="w-14 h-14 rounded-full bg-[#34C759]/10 flex items-center justify-center">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#34C759" strokeWidth="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+                </div>
+                <p className="text-[16px] font-medium text-[#1D1D1F]">上传成功</p>
+              </motion.div>
+            )}
+          </motion.div>
+        </div>
+      );
+    }
+
+    /* ============ OB Step 2: Parse Result ============ */
+    function OBParse({ onNavigate }) {
+      const items = [{label:'姓名',value:'张明远'},{label:'工作年限',value:'5 年'},{label:'当前职位',value:'高级 Java 后端开发'},{label:'最近公司',value:'某一线互联网企业'},{label:'教育背景',value:'985 本科 · 计算机科学'}];
+      const techs = ['Spring Cloud','MySQL','Redis','Kafka','Docker','K8s','微服务','高并发'];
+      const [visCount, setVisCount] = useState(0);
+      useEffect(() => {
+        items.forEach((_, i) => setTimeout(() => setVisCount(c => c+1), 400 + i*350));
+      }, []);
+      return (
+        <div className="min-h-screen bg-[#FAFAFA] px-6 pt-16 pb-10">
+          <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{duration:0.5}}>
+            <p className="text-[13px] text-[#007AFF] font-medium mb-2">AI 解析完成</p>
+            <h1 className="text-[24px] font-semibold text-[#1D1D1F] mb-8">简历拆解结果</h1>
+            <div className="bg-white rounded-3xl border border-gray-100 p-6 mb-6" style={{boxShadow:'0 8px 30px rgb(0,0,0,0.04)'}}>
+              {items.map((item, i) => (
+                i < visCount && <motion.div key={item.label} className="flex justify-between items-center py-3 border-b border-gray-50 last:border-0" initial={{opacity:0,x:-15}} animate={{opacity:1,x:0}} transition={{duration:0.3}}>
+                  <span className="text-[13px] text-[#86868B]">{item.label}</span>
+                  <span className="text-[14px] font-medium text-[#1D1D1F]">{item.value}</span>
+                </motion.div>
+              ))}
+            </div>
+            {visCount >= items.length && (
+              <motion.div initial={{opacity:0,y:15}} animate={{opacity:1,y:0}} transition={{duration:0.4}}>
+                <p className="text-[13px] text-[#86868B] mb-3">识别到的核心技术栈</p>
+                <div className="flex flex-wrap gap-2 mb-10">
+                  {techs.map((t, i) => (
+                    <motion.span key={t} className="px-3 py-1.5 bg-white border border-gray-100 rounded-full text-[13px] text-[#1D1D1F] font-medium" style={{boxShadow:'0 2px 8px rgb(0,0,0,0.03)'}} initial={{opacity:0,scale:0.8}} animate={{opacity:1,scale:1}} transition={{delay:i*0.06}}>{t}</motion.span>
+                  ))}
+                </div>
+                <motion.button className="w-full h-14 bg-black text-white rounded-2xl text-[16px] font-medium" whileTap={{scale:0.98}} onClick={() => onNavigate('ob-agent-hello')} initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{delay:0.3}}>
+                  确认无误，继续 →
+                </motion.button>
+              </motion.div>
+            )}
+          </motion.div>
+        </div>
+      );
+    }
+
+    /* ============ OB Step 3: Agent Hello ============ */
+    function OBAgentHello({ onNavigate }) {
+      const [phase, setPhase] = useState(0);
+      useEffect(() => {
+        setTimeout(() => setPhase(1), 800);
+        setTimeout(() => setPhase(2), 2200);
+        setTimeout(() => setPhase(3), 3500);
+        setTimeout(() => onNavigate('ob-agent-intro'), 5500);
+      }, []);
+      return (
+        <div className="flex flex-col items-center justify-center min-h-screen bg-[#FAFAFA] px-8">
+          <motion.div className="relative w-24 h-24 mb-10" initial={{scale:0}} animate={{scale:1}} transition={{type:'spring',stiffness:200,damping:15}}>
+            <div className="w-24 h-24 rounded-full bg-black flex items-center justify-center">
+              <span className="text-white text-[28px] font-semibold">A</span>
+            </div>
+            {phase >= 1 && (
+              <motion.div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[#34C759] border-3 border-[#FAFAFA] flex items-center justify-center" initial={{scale:0}} animate={{scale:1}} transition={{type:'spring'}}>
+                <div className="w-2.5 h-2.5 rounded-full bg-white"/>
+              </motion.div>
+            )}
+          </motion.div>
+          {phase >= 1 && (
+            <motion.p className="text-[13px] text-[#34C759] font-medium mb-4" initial={{opacity:0}} animate={{opacity:1}}>在线</motion.p>
+          )}
+          {phase >= 2 && (
+            <motion.div initial={{opacity:0,y:10}} animate={{opacity:1,y:0}}>
+              <h2 className="text-[22px] font-semibold text-[#1D1D1F] text-center mb-2">你的专属经纪人</h2>
+              <p className="text-[14px] text-[#86868B] text-center">已上线，正在初始化...</p>
+            </motion.div>
+          )}
+          {phase >= 3 && (
+            <motion.div className="flex gap-1.5 mt-6" initial={{opacity:0}} animate={{opacity:1}}>
+              <div className="w-2 h-2 bg-[#86868B] rounded-full typing-dot-1"/>
+              <div className="w-2 h-2 bg-[#86868B] rounded-full typing-dot-2"/>
+              <div className="w-2 h-2 bg-[#86868B] rounded-full typing-dot-3"/>
+            </motion.div>
+          )}
+        </div>
+      );
+    }
+
+    /* ============ OB Step 4: Agent Intro ============ */
+    function OBAgentIntro({ onNavigate }) {
+      const features = [
+        {icon:'🔍', title:'全网嗅探', desc:'在各大招聘平台和猎头网络中搜寻匹配机会'},
+        {icon:'🤝', title:'代理谈判', desc:'根据你的底线和偏好，替你与 HR 沟通薪资'},
+        {icon:'🛡️', title:'隐私保护', desc:'你的真实信息和底线不会透露给任何企业'},
+        {icon:'📊', title:'情报收集', desc:'深入企业内部获取团队氛围、加班等真实情况'},
+      ];
+      return (
+        <div className="min-h-screen bg-[#FAFAFA] px-6 pt-16 pb-10">
+          <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}}>
+            <p className="text-[13px] text-[#007AFF] font-medium mb-2">认识你的经纪人</p>
+            <h1 className="text-[24px] font-semibold text-[#1D1D1F] mb-2">我能为你做什么</h1>
+            <p className="text-[14px] text-[#86868B] mb-8 leading-relaxed">简单来说，我就是你的「职业代理人」。<br/>你只需告诉我你的真实想法，剩下的交给我。</p>
+          </motion.div>
+          <div className="space-y-4 mb-10">
+            {features.map((f, i) => (
+              <motion.div key={f.title} className="bg-white rounded-2xl border border-gray-100 p-5" style={{boxShadow:'0 4px 15px rgb(0,0,0,0.03)'}} initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{delay:0.3+i*0.12}}>
+                <div className="flex gap-4 items-start">
+                  <span className="text-[24px]">{f.icon}</span>
+                  <div>
+                    <p className="text-[15px] font-semibold text-[#1D1D1F] mb-1">{f.title}</p>
+                    <p className="text-[13px] text-[#86868B] leading-relaxed">{f.desc}</p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+          <motion.button className="w-full h-14 bg-black text-white rounded-2xl text-[16px] font-medium" whileTap={{scale:0.98}} onClick={() => onNavigate('ob-deepqa')} initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{delay:0.8}}>
+            了解了，开始合作 →
+          </motion.button>
+        </div>
+      );
+    }
+
+    /* ============ OB Step 5: Deep Q&A ============ */
+    function OBDeepQA({ onNavigate }) {
+      const msgs = [
+        {role:'ai', text:'现在我需要了解一些简历里没有的信息。'},
+        {role:'ai', text:'你的薪资底线是多少？有没有绝对不能接受的条件？'},
+        {role:'user', text:'薪资底线 25k，绝对不接受大小周和 996，最好能带团队。'},
+        {role:'ai', text:'明白了。关于工作地点有偏好吗？能接受出差吗？'},
+        {role:'user', text:'北京优先，上海也行。短期出差可以，长期驻场不行。'},
+        {role:'ai', text:'了解。最后一个：你离职的真实原因是什么？这个信息只有我知道，不会透露给任何企业。'},
+        {role:'user', text:'现在的公司晋升通道堵死了，上面的人不走我就没机会。'},
+        {role:'ai', text:'信息收集完毕。让我为你生成「职业镜像」——'},
+      ];
+      const [vis, setVis] = useState(0);
+      const endRef = useRef(null);
+      useEffect(() => {
+        msgs.forEach((_, i) => setTimeout(() => {
+          setVis(c => c+1);
+          if(i === msgs.length - 1) setTimeout(() => onNavigate('aha'), 1500);
+        }, (i+1) * 900));
+      }, []);
+      useEffect(() => { endRef.current?.scrollIntoView({behavior:'smooth'}); }, [vis]);
+      return (
+        <div className="flex flex-col h-screen bg-[#FAFAFA]">
+          <div className="backdrop-blur-xl bg-white/80 border-b border-gray-100 px-5 py-4 flex items-center gap-3 flex-shrink-0">
+            <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center"><span className="text-[12px] font-semibold text-white">A</span></div>
+            <div><p className="text-[15px] font-medium text-[#1D1D1F]">深度了解</p><p className="text-[12px] text-[#34C759]">经纪人提问中</p></div>
+          </div>
+          <div className="flex-1 overflow-y-auto px-5 py-6 space-y-4">
+            {msgs.slice(0, vis).map((msg, i) => (
+              <motion.div key={i} className={`flex ${msg.role==='user'?'justify-end':'justify-start'}`} initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} transition={{duration:0.3}}>
+                {msg.role==='ai' ? (
+                  <div className="bg-[#F5F5F7] text-[#1D1D1F] rounded-2xl rounded-tl-sm px-4 py-3 max-w-[85%]"><p className="text-[15px] leading-relaxed">{msg.text}</p></div>
+                ) : (
+                  <div className="bg-black text-white rounded-2xl rounded-tr-sm px-4 py-3 max-w-[80%]"><p className="text-[15px] leading-relaxed">{msg.text}</p></div>
+                )}
+              </motion.div>
+            ))}
+            <div ref={endRef}/>
+          </div>
+        </div>
+      );
+    }
+
+    /* ============ Aha Moment: Career Mirror ============ */
+    function AhaMomentPage({ onNavigate }) {
+      const [phase, setPhase] = useState(0);
+      useEffect(() => { setTimeout(() => setPhase(1), 2800); }, []);
+      const skills = [{name:'微服务',level:92},{name:'团队管理',level:78},{name:'高并发',level:85},{name:'系统设计',level:88},{name:'DevOps',level:72}];
+      if (phase === 0) {
+        return (
+          <div className="flex flex-col items-center justify-center min-h-screen bg-[#FAFAFA] px-8">
+            <motion.div initial={{opacity:0,scale:0.9}} animate={{opacity:1,scale:1}} className="text-center">
+              <div className="relative w-24 h-24 mx-auto mb-8">
+                <div className="absolute inset-0 rounded-full border-2 border-[#007AFF]/20"/>
+                <div className="absolute inset-2 rounded-full border-2 border-[#007AFF]/40 animate-ripple"/>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-full bg-black flex items-center justify-center"><span className="text-white text-[18px] font-semibold">A</span></div>
+                </div>
+              </div>
+              <p className="text-[18px] font-medium text-[#1D1D1F] mb-2">正在生成你的职业镜像</p>
+              <p className="text-[14px] text-[#86868B]">分析简历 · 交叉比对市场数据...</p>
+              <div className="mt-8 w-48 h-1 bg-[#F5F5F7] rounded-full overflow-hidden mx-auto">
+                <motion.div className="h-full bg-[#007AFF] rounded-full" initial={{width:'0%'}} animate={{width:'100%'}} transition={{duration:2.5,ease:'easeInOut'}}/>
+              </div>
+            </motion.div>
+          </div>
+        );
+      }
+      return (
+        <div className="min-h-screen bg-[#FAFAFA] px-5 pt-16 pb-10">
+          <motion.div initial={{opacity:0,y:30}} animate={{opacity:1,y:0}} transition={{duration:0.6,type:'spring'}}>
+            <div className="text-center mb-8">
+              <motion.p className="text-[13px] text-[#007AFF] font-medium mb-2" initial={{opacity:0}} animate={{opacity:1}} transition={{delay:0.2}}>CAREER MIRROR</motion.p>
+              <motion.h1 className="text-[26px] font-semibold text-[#1D1D1F] leading-tight" initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} transition={{delay:0.3}}>你的职业镜像<br/>已生成</motion.h1>
+            </div>
+            {/* Core stats */}
+            <motion.div className="bg-white rounded-3xl border border-gray-100 p-6 mb-5" style={{boxShadow:'0 8px 30px rgb(0,0,0,0.04)'}} initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{delay:0.4}}>
+              <div className="flex gap-4">
+                <div className="flex-1 text-center">
+                  <motion.p className="text-[36px] font-semibold text-[#1D1D1F]" initial={{opacity:0,scale:0.5}} animate={{opacity:1,scale:1}} transition={{delay:0.6,type:'spring',stiffness:200}}>Top 15%</motion.p>
+                  <p className="text-[12px] text-[#86868B] mt-1">当前市场稀缺度</p>
+                </div>
+                <div className="w-px bg-gray-200"/>
+                <div className="flex-1 text-center">
+                  <motion.p className="text-[36px] font-semibold text-[#1D1D1F]" initial={{opacity:0,scale:0.5}} animate={{opacity:1,scale:1}} transition={{delay:0.8,type:'spring',stiffness:200}}>25-32k</motion.p>
+                  <p className="text-[12px] text-[#86868B] mt-1">预估谈判锚点</p>
+                </div>
+              </div>
+            </motion.div>
+            {/* Ability Rings */}
+            <motion.div className="bg-white rounded-3xl border border-gray-100 p-6 mb-5 flex flex-col items-center" style={{boxShadow:'0 8px 30px rgb(0,0,0,0.04)'}} initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{delay:0.6}}>
+              <p className="text-[13px] text-[#86868B] mb-4 self-start">原子能力矩阵</p>
+              <AbilityRings skills={skills} size={220}/>
+              <div className="w-full mt-5 space-y-2.5">
+                {skills.map((s, i) => {
+                  const clrs = [['#007AFF','#00C6FF'],['#5856D6','#AF52DE'],['#34C759','#30D158'],['#FF9500','#FF6B00'],['#FF2D55','#FF375F']];
+                  return (
+                    <motion.div key={s.name} className="flex items-center justify-between" initial={{opacity:0,x:-10}} animate={{opacity:1,x:0}} transition={{delay:0.8+i*0.08}}>
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-2.5 h-2.5 rounded-full" style={{background:`linear-gradient(135deg, ${clrs[i][0]}, ${clrs[i][1]})`}}/>
+                        <span className="text-[13px] text-[#1D1D1F] font-medium">{s.name}</span>
+                      </div>
+                      <span className="text-[13px] font-semibold" style={{color:clrs[i][0]}}>{s.level}</span>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </motion.div>
+            {/* Tags */}
+            <motion.div className="mb-8" initial={{opacity:0}} animate={{opacity:1}} transition={{delay:1}}>
+              <p className="text-[13px] text-[#86868B] mb-3">身价标签</p>
+              <div className="flex flex-wrap gap-2">
+                {['微服务化改造专家','可带 3-5 人团队','高并发百万级 QPS','有大厂背景','5年+经验'].map((tag,i)=>(
+                  <motion.span key={tag} className="px-4 py-2 bg-white border border-gray-100 rounded-full text-[13px] text-[#1D1D1F] font-medium" style={{boxShadow:'0 2px 8px rgb(0,0,0,0.04)'}} initial={{opacity:0,scale:0.8}} animate={{opacity:1,scale:1}} transition={{delay:1.1+i*0.08}}>{tag}</motion.span>
+                ))}
+              </div>
+            </motion.div>
+            <motion.button className="w-full h-14 bg-black text-white rounded-2xl text-[16px] font-medium" whileTap={{scale:0.98}} onClick={()=>onNavigate('privacy')} initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{delay:1.3}}>
+              继续完善 →
+            </motion.button>
+          </motion.div>
+        </div>
+      );
+    }
+
+    /* ============ Privacy Space (Dark Theme) ============ */
+    function PrivacyPage({ onNavigate }) {
+      const [step, setStep] = useState(0);
+      useEffect(() => {
+        setTimeout(() => setStep(1), 800);
+        setTimeout(() => setStep(2), 2500);
+      }, []);
+      const blocked = [{name:'当前就职公司',reason:'自动识别'},{name:'前东家（某电商平台）',reason:'简历关联'},{name:'关联子公司 × 3',reason:'集团图谱推算'}];
+      return (
+        <div className="min-h-screen bg-[#0A0A0A] px-5 pt-14 pb-10">
+          <motion.div className="flex items-center gap-3 mb-2" initial={{opacity:0}} animate={{opacity:1}}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>
+            <h1 className="text-[22px] font-semibold text-white">私密空间</h1>
+          </motion.div>
+          <motion.p className="text-[14px] text-white/50 mb-8 leading-relaxed" initial={{opacity:0}} animate={{opacity:1}} transition={{delay:0.2}}>
+            端到端加密 · 仅你和 Agent 可见
+          </motion.p>
+          {step >= 1 && (
+            <motion.div className="bg-white/5 rounded-3xl border border-white/10 p-5 mb-5 backdrop-blur-sm" initial={{opacity:0,y:20}} animate={{opacity:1,y:0}}>
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-[15px] font-medium text-white">已为你屏蔽的企业</p>
+                <span className="text-[12px] text-[#34C759] font-medium bg-[#34C759]/10 px-2.5 py-1 rounded-full">自动生成</span>
+              </div>
+              <div className="space-y-3">
+                {blocked.map((c,i)=>(
+                  <motion.div key={c.name} className="flex items-center justify-between py-2" initial={{opacity:0,x:-10}} animate={{opacity:1,x:0}} transition={{delay:0.3+i*0.15}}>
+                    <div className="flex items-center gap-3">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF3B30" strokeWidth="1.5"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/></svg>
+                      <span className="text-[14px] text-white/80">{c.name}</span>
+                    </div>
+                    <span className="text-[12px] text-white/30">{c.reason}</span>
+                  </motion.div>
+                ))}
+              </div>
+              <div className="mt-3 pt-3 border-t border-white/10">
+                <button className="text-[13px] text-[#007AFF] font-medium">+ 手动添加</button>
+              </div>
+            </motion.div>
+          )}
+          {step >= 2 && (
+            <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}}>
+              <div className="flex items-center gap-2 mb-4">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white/60" strokeWidth="1.5"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <p className="text-[15px] font-medium text-white">和 Agent 交个底</p>
+              </div>
+              <div className="space-y-4">
+                {[
+                  {q:'如果原公司挽留加薪 20%，你会留下吗？',a:'不会，问题不在薪资'},
+                  {q:'你能接受的最早入职时间？',a:'需要一个月交接期'},
+                  {q:'有没有正在面试的其他公司？',a:'字节和美团都在聊，还没到终面'},
+                ].map((item,i)=>(
+                  <motion.div key={i} className="bg-white/5 rounded-2xl border border-white/10 p-4" initial={{opacity:0,y:15}} animate={{opacity:1,y:0}} transition={{delay:0.3+i*0.2}}>
+                    <p className="text-[14px] text-white font-medium mb-2">{item.q}</p>
+                    <div className="bg-white/5 rounded-xl px-3.5 py-2.5">
+                      <p className="text-[14px] text-white/50">{item.a}</p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+              <motion.p className="text-[13px] text-white/30 text-center mt-6 mb-4" initial={{opacity:0}} animate={{opacity:1}} transition={{delay:1.2}}>
+                这些信息将帮助 Agent 在谈判中更好地为你争取权益
+              </motion.p>
+              <motion.button className="w-full h-14 bg-white text-black rounded-2xl text-[16px] font-medium" whileTap={{scale:0.98}} onClick={()=>onNavigate('dispatch')} initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{delay:1.4}}>
+                一切就绪，准备出发 →
+              </motion.button>
+            </motion.div>
+          )}
+        </div>
+      );
+    }
+
+    /* ============ Dispatch (Ceremony) ============ */
+    function DispatchPage({ onNavigate }) {
+      const [launched, setLaunched] = useState(false);
+      const [holdProgress, setHoldProgress] = useState(0);
+      const progressTimer = useRef(null);
+      const startHold = () => {
+        let p = 0;
+        progressTimer.current = setInterval(() => {
+          p += 2;
+          setHoldProgress(p);
+          if(p >= 100) { clearInterval(progressTimer.current); setLaunched(true); setTimeout(() => onNavigate('dashboard'), 3000); }
+        }, 30);
+      };
+      const endHold = () => { clearInterval(progressTimer.current); setHoldProgress(0); };
+      if (launched) {
+        return (
+          <div className="flex flex-col items-center justify-center min-h-screen bg-black px-8">
+            <motion.div initial={{scale:0}} animate={{scale:1}} transition={{type:'spring',stiffness:200,damping:15}} className="mb-8">
+              <div className="w-24 h-24 rounded-full bg-white/10 flex items-center justify-center"><div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center"><IconRadar/></div></div>
+            </motion.div>
+            <motion.h2 className="text-[22px] font-semibold text-white text-center mb-3" initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{delay:0.3}}>Agent 已出发</motion.h2>
+            <motion.p className="text-[15px] text-white/60 text-center leading-relaxed max-w-[280px]" initial={{opacity:0}} animate={{opacity:1}} transition={{delay:0.6}}>你的经纪人正在全网搜寻机会。<br/>有进展时会立即通知你。</motion.p>
+            <motion.div className="mt-10 flex items-center gap-2" initial={{opacity:0}} animate={{opacity:1}} transition={{delay:1}}>
+              <div className="w-2 h-2 bg-[#34C759] rounded-full animate-ripple"/><span className="text-[13px] text-[#34C759]">正在扫描 1,247 个岗位...</span>
+            </motion.div>
+          </div>
+        );
+      }
+      return (
+        <div className="flex flex-col items-center justify-center min-h-screen bg-[#FAFAFA] px-8">
+          <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} className="text-center w-full">
+            <div className="relative w-20 h-20 mx-auto mb-8">
+              <div className="w-20 h-20 rounded-full bg-black flex items-center justify-center animate-float"><span className="text-white text-[24px] font-semibold">A</span></div>
+              <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-[#34C759] border-2 border-[#FAFAFA] flex items-center justify-center"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M20 6 9 17l-5-5"/></svg></div>
+            </div>
+            <h2 className="text-[22px] font-semibold text-[#1D1D1F] mb-2">准备好了</h2>
+            <p className="text-[14px] text-[#86868B] leading-relaxed mb-2">你的职业镜像、底线偏好、隐私屏蔽<br/>都已配置完毕</p>
+            <p className="text-[15px] text-[#1D1D1F] font-medium mb-12">长按下方按钮，派出你的经纪人</p>
+            <div className="relative w-full max-w-[300px] mx-auto">
+              <div className="h-16 bg-white rounded-full border border-gray-200 overflow-hidden relative" style={{boxShadow:'0 8px 30px rgb(0,0,0,0.06)'}}>
+                <motion.div className="absolute inset-0 bg-black rounded-full" style={{width: holdProgress+'%'}} />
+                <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+                  <span className={`text-[15px] font-medium transition-colors duration-300 ${holdProgress > 50 ? 'text-white' : 'text-[#1D1D1F]'}`}>
+                    {holdProgress > 0 && holdProgress < 100 ? `${holdProgress}%` : '长按启动 Agent'}
+                  </span>
+                </div>
+              </div>
+              <div className="absolute inset-0 z-20 cursor-pointer rounded-full" onMouseDown={startHold} onMouseUp={endHold} onMouseLeave={endHold} onTouchStart={startHold} onTouchEnd={endHold}/>
+            </div>
+            <motion.p className="text-[12px] text-[#86868B] mt-6" initial={{opacity:0}} animate={{opacity:1}} transition={{delay:1}}>Agent 启动后将 24/7 持续工作</motion.p>
+          </motion.div>
+        </div>
+      );
+    }
+
+    /* ============ Dashboard Components ============ */
+    function BottomTabBar({activeTab,onTabChange}) {
+      const tabs=[{icon:IconHome,label:'概览'},{icon:IconSparkles,label:'机会',badge:3},{icon:IconMessage,label:'经纪人'},{icon:IconUserTab,label:'资产'}];
+      return (
+        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] h-20 backdrop-blur-xl bg-white/80 border-t border-gray-100 flex items-start pt-2 px-4 z-40">
+          {tabs.map((tab,i)=>{const Icon=tab.icon;const isA=activeTab===i;
+            return (<button key={tab.label} className="flex-1 flex flex-col items-center gap-1 pt-1" onClick={()=>onTabChange(i)}>
+              <div className="relative"><Icon active={isA}/>{tab.badge&&tab.badge>0&&<span className="absolute -top-1.5 -right-2.5 w-4 h-4 bg-[#FF3B30] rounded-full text-[10px] text-white font-medium flex items-center justify-center">{tab.badge}</span>}</div>
+              <span className={`text-[10px] ${isA?'text-[#1D1D1F] font-medium':'text-[#86868B]'}`}>{tab.label}</span>
+            </button>);
+          })}
+        </div>
+      );
+    }
+    /* ============ Tab 0: Overview ============ */
+    function OverviewPage() {
+      const [scanCount, setScanCount] = useState(847);
+      const [matchCount, setMatchCount] = useState(23);
+      const [filterCount, setFilterCount] = useState(6);
+      const [scrollX, setScrollX] = useState(0);
+      useEffect(() => {
+        const t = setInterval(() => {
+          setScanCount(c => c + Math.floor(Math.random()*3)+1);
+          if(Math.random()>0.6) setMatchCount(c => c + 1);
+          if(Math.random()>0.8) setFilterCount(c => c + 1);
+        }, 2200);
+        const s = setInterval(() => setScrollX(x => x - 1), 30);
+        return () => { clearInterval(t); clearInterval(s); };
+      }, []);
+      const statusItems = ['正在浏览 BOSS直聘 · Java架构师','分析 拉勾网 · 后端负责人','匹配 猎聘 · 技术总监','筛选 脉脉 · 基础架构','浏览 LinkedIn · Staff Engineer'];
+      const enterprises = [
+        {name:'字节跳动',team:'商业化-后端架构组',salary:'28-35k',tags:['双休','16薪','弹性工时'],match:95,jd:'负责商业化广告系统核心架构设计，带领 5 人团队完成微服务化改造。要求 5 年以上后端经验，熟悉 Spring Cloud。'},
+        {name:'蚂蚁集团',team:'支付安全-系统架构',salary:'30-40k',tags:['双休','股票','杭州'],match:91,jd:'负责支付链路核心系统架构演进，设计高可用、高并发方案。要求分布式系统经验，熟悉金融安全。'},
+        {name:'美团',team:'到店事业群-平台技术',salary:'26-32k',tags:['双休','15薪','北京'],match:88,jd:'负责到店业务平台中间件建设，优化系统稳定性及性能。要求有中间件开发经验，熟悉 Kafka/Redis。'},
+        {name:'小红书',team:'社区技术-后端',salary:'27-34k',tags:['双休','RSU','上海'],match:85,jd:'参与社区内容推荐系统后端架构，负责千万级 DAU 场景下的性能优化与稳定性建设。'},
+      ];
+      return (
+        <div className="min-h-screen bg-[#FAFAFA] pb-24">
+          <div className="sticky top-0 z-30 backdrop-blur-xl bg-white/80 border-b border-gray-100 px-5 pt-14 pb-4">
+            <h1 className="text-[22px] font-semibold text-[#1D1D1F]">概览</h1>
+          </div>
+          {/* AI Working Banner */}
+          <div className="px-5 pt-5">
+            <div className="bg-black rounded-3xl p-5 mb-4 overflow-hidden relative">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="relative"><div className="w-2.5 h-2.5 bg-[#34C759] rounded-full"/><div className="absolute inset-0 w-2.5 h-2.5 bg-[#34C759] rounded-full animate-ripple"/></div>
+                <span className="text-[13px] text-[#34C759] font-medium">Agent 工作中</span>
+              </div>
+              {/* Scrolling status */}
+              <div className="overflow-hidden h-5 mb-4">
+                <div className="flex gap-8 whitespace-nowrap" style={{transform:`translateX(${scrollX}px)`}}>
+                  {[...statusItems,...statusItems,...statusItems].map((s,i) => (
+                    <span key={i} className="text-[12px] text-white/50">{s}</span>
+                  ))}
+                </div>
+              </div>
+              {/* Jumping data */}
+              <div className="flex gap-3">
+                <div className="flex-1 bg-white/10 rounded-2xl p-3 text-center">
+                  <p className="text-[22px] font-bold text-white">{scanCount}</p>
+                  <p className="text-[11px] text-white/40 mt-0.5">已扫描岗位</p>
+                </div>
+                <div className="flex-1 bg-white/10 rounded-2xl p-3 text-center">
+                  <p className="text-[22px] font-bold text-[#34C759]">{matchCount}</p>
+                  <p className="text-[11px] text-white/40 mt-0.5">初步匹配</p>
+                </div>
+                <div className="flex-1 bg-white/10 rounded-2xl p-3 text-center">
+                  <p className="text-[22px] font-bold text-[#007AFF]">{filterCount}</p>
+                  <p className="text-[11px] text-white/40 mt-0.5">深度筛选</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* Enterprise JD List */}
+          <div className="px-5">
+            <p className="text-[15px] font-medium text-[#1D1D1F] mb-3">企业在发布</p>
+            <div className="space-y-3">
+              {enterprises.map((e, i) => (
+                <motion.div key={e.name} className="bg-white rounded-2xl border border-gray-100 overflow-hidden" style={{boxShadow:'0 4px 15px rgb(0,0,0,0.03)'}} initial={{opacity:0,y:15}} animate={{opacity:1,y:0}} transition={{delay:i*0.08}}>
+                  <div className="p-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <div>
+                        <p className="text-[15px] font-semibold text-[#1D1D1F]">{e.name}</p>
+                        <p className="text-[13px] text-[#86868B] mt-0.5">{e.team}</p>
+                      </div>
+                    </div>
+                    <p className="text-[14px] text-[#86868B] leading-relaxed mb-3">{e.jd}</p>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-[14px] font-semibold text-[#1D1D1F]">{e.salary}</span>
+                      {e.tags.map(t => (<span key={t} className="px-2 py-0.5 bg-[#F5F5F7] rounded text-[11px] text-[#86868B]">{t}</span>))}
+                    </div>
+                    <div className="flex gap-2">
+                      <motion.button className="flex-1 h-10 bg-black text-white rounded-xl text-[13px] font-medium" whileTap={{scale:0.98}}>让 Agent 开聊</motion.button>
+                      <motion.button className="h-10 px-4 bg-[#F5F5F7] text-[#1D1D1F] rounded-xl text-[13px] font-medium" whileTap={{scale:0.98}}>不感兴趣</motion.button>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ============ Tab 1: Opportunities ============ */
+    function OpportunitiesFeed() {
+      const [expandChat, setExpandChat] = useState(null);
+      const opps = [
+        {id:1,company:'字节跳动',team:'商业化团队',match:95,salary:'28-35k',intent:'面试邀约',intentColor:'#FF2D55',
+          verdict:'Agent 已完成初筛沟通，对方 HR 高度认可，确认双休 + 弹性工时 + 16薪。现已通过初筛，HR 正式发起面试邀约，请尽快确认。',
+          interviewInfo:{time:'下周三 4/16 14:00',type:'线上技术面',interviewer:'技术总监 · 一面',deadline:'请在 24 小时内确认'},
+          chatLog:[
+            {role:'agent',text:'您好，我是张明远的职业经纪人。他在微服务架构和高并发领域有 5 年深度经验，目前探索新机会。'},
+            {role:'hr',text:'我们商业化团队正好缺一个架构师，可以先聊聊。薪资范围大概 28-35k。'},
+            {role:'agent',text:'好的。他非常重视工作生活平衡，能否确认贵团队的工作时间安排？'},
+            {role:'hr',text:'我们是标准双休，弹性工作制，核心时间 10-18 点。'},
+            {role:'agent',text:'很好。关于团队规模和汇报线，方便了解一下吗？他有团队管理经验，希望能发挥这方面优势。'},
+            {role:'hr',text:'目前团队 8 人，他来的话会带 3-4 个人的小组。直接向技术总监汇报。'},
+            {role:'hr',text:'候选人背景很匹配，我们想尽快安排一轮技术面，下周三下午方便吗？'},
+            {role:'agent',text:'好的，我会尽快与他确认时间并回复您。'},
+          ]},
+        {id:2,company:'蚂蚁集团',team:'支付安全',match:91,salary:'30-40k',intent:'高意向',intentColor:'#34C759',
+          verdict:'Agent 已论证：base 杭州，但支持每周 2 天远程。薪资竞争力强，且有股票激励。团队技术氛围好。',
+          chatLog:[
+            {role:'agent',text:'你好，代表一位在分布式系统领域有丰富经验的候选人，他对贵司支付安全方向非常感兴趣。'},
+            {role:'hr',text:'欢迎了解。我们在做支付链路的架构升级，确实需要有经验的架构师。'},
+            {role:'agent',text:'他目前在北京，贵岗位是否支持远程或灵活办公？'},
+            {role:'hr',text:'我们支持混合办公，每周可以有 2 天远程。入职后也可以协助解决住房问题。'},
+          ]},
+        {id:3,company:'美团',team:'到店事业群',match:88,salary:'26-32k',intent:'沟通中',intentColor:'#FF9500',
+          verdict:'Agent 评估中：HR 回复积极但尚未确认具体薪资范围上限。需要进一步确认团队加班情况。',
+          chatLog:[
+            {role:'agent',text:'您好，我代表一位候选人了解贵司平台技术岗位，他在中间件和微服务方面很有经验。'},
+            {role:'hr',text:'好的，我们平台组确实在扩招。可以发一下候选人的基本情况吗？'},
+            {role:'agent',text:'5 年经验，某一线互联网背景，擅长 Spring Cloud / Kafka / Redis，有带团队经验。'},
+          ]},
+      ];
+      return (
+        <div className="min-h-screen bg-[#FAFAFA] pb-24">
+          <div className="sticky top-0 z-30 backdrop-blur-xl bg-white/80 border-b border-gray-100 px-5 pt-14 pb-4">
+            <h1 className="text-[22px] font-semibold text-[#1D1D1F]">机会</h1>
+            <p className="text-[13px] text-[#86868B] mt-1">Agent 沟通结果 · 高意向优先</p>
+          </div>
+          <div className="px-5 pt-5 space-y-4">
+            {opps.map((opp, idx) => (
+              <motion.div key={opp.id} className="bg-white rounded-3xl border border-gray-100 overflow-hidden" style={{boxShadow:'0 8px 30px rgb(0,0,0,0.04)'}} initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} transition={{delay:idx*0.1}}>
+                {/* Header */}
+                <div className="px-5 pt-5 pb-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <div>
+                      <p className="text-[16px] font-semibold text-[#1D1D1F]">{opp.company}</p>
+                      <p className="text-[13px] text-[#86868B]">{opp.team} · {opp.salary}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {opp.intent==='沟通中' ? (
+                        <div className="flex items-center gap-1.5 bg-[#FF9500]/10 px-2.5 py-1 rounded-full">
+                          <div className="flex gap-0.5">
+                            <div className="w-1 h-1 bg-[#FF9500] rounded-full typing-dot-1"/>
+                            <div className="w-1 h-1 bg-[#FF9500] rounded-full typing-dot-2"/>
+                            <div className="w-1 h-1 bg-[#FF9500] rounded-full typing-dot-3"/>
+                          </div>
+                          <span className="text-[12px] font-medium text-[#FF9500]">对话中</span>
+                        </div>
+                      ) : opp.intent==='面试邀约' ? (
+                        <div className="flex items-center gap-1.5 bg-[#FF2D55] px-2.5 py-1 rounded-full animate-subtle-pulse">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+                          <span className="text-[12px] font-semibold text-white">面试邀约</span>
+                        </div>
+                      ) : (
+                        <span className="text-[13px] font-semibold px-2.5 py-1 rounded-full bg-[#34C759]/10" style={{color:opp.intentColor}}>{opp.intent}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                {/* Agent Verdict */}
+                <div className={`mx-5 ${opp.intent==='沟通中'?'bg-[#FFF8F0] border border-[#FF9500]/10':opp.intent==='面试邀约'?'bg-[#FFF0F3] border border-[#FF2D55]/10':'bg-[#F0F7FF]'} rounded-xl p-3.5 mb-3`}>
+                  <div className="flex items-start gap-2">
+                    <span className="text-[12px] mt-0.5">{opp.intent==='沟通中'?'💬':opp.intent==='面试邀约'?'🎯':'🤖'}</span>
+                    <div className="flex-1">
+                      <p className="text-[13px] text-[#1D1D1F] leading-relaxed">{opp.verdict}</p>
+                      {opp.intent==='沟通中' && (
+                        <div className="mt-2 flex items-center gap-2">
+                          <div className="flex-1 h-0.5 bg-gray-200 rounded-full overflow-hidden">
+                            <motion.div className="h-full bg-[#FF9500] rounded-full" initial={{width:'20%'}} animate={{width:['20%','80%','45%','65%']}} transition={{duration:4,repeat:Infinity,ease:'easeInOut'}}/>
+                          </div>
+                          <span className="text-[11px] text-[#FF9500]">实时对话</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                {/* Interview Info (for 面试邀约) */}
+                {opp.intent==='面试邀约' && opp.interviewInfo && (
+                  <div className="mx-5 mb-3 bg-white border-2 border-[#FF2D55]/20 rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF2D55" strokeWidth="2"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                      <span className="text-[13px] font-semibold text-[#FF2D55]">面试邀请详情</span>
+                      <span className="ml-auto text-[11px] text-[#FF2D55] bg-[#FF2D55]/10 px-2 py-0.5 rounded-full font-medium">{opp.interviewInfo.deadline}</span>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between"><span className="text-[12px] text-[#86868B]">面试时间</span><span className="text-[13px] font-medium text-[#1D1D1F]">{opp.interviewInfo.time}</span></div>
+                      <div className="flex justify-between"><span className="text-[12px] text-[#86868B]">面试形式</span><span className="text-[13px] font-medium text-[#1D1D1F]">{opp.interviewInfo.type}</span></div>
+                      <div className="flex justify-between"><span className="text-[12px] text-[#86868B]">面试官</span><span className="text-[13px] font-medium text-[#1D1D1F]">{opp.interviewInfo.interviewer}</span></div>
+                    </div>
+                  </div>
+                )}
+                {/* Chat Log Toggle */}
+                <div className="px-5 mb-3">
+                  <button className="text-[13px] text-[#007AFF] font-medium" onClick={() => setExpandChat(expandChat===opp.id?null:opp.id)}>
+                    {expandChat===opp.id ? '收起沟通记录 ↑' : '查看 Agent 与 HR 沟通记录 ↓'}
+                  </button>
+                </div>
+                {expandChat===opp.id && (
+                  <motion.div className="mx-5 mb-3 bg-[#F5F5F7] rounded-xl p-3 space-y-2.5" initial={{opacity:0,height:0}} animate={{opacity:1,height:'auto'}}>
+                    {opp.chatLog.map((msg, mi) => (
+                      <div key={mi} className={`flex ${msg.role==='agent'?'justify-start':'justify-end'}`}>
+                        <div className={`max-w-[85%] rounded-xl px-3 py-2 ${msg.role==='agent'?'bg-white':'bg-black/5'}`}>
+                          <p className="text-[11px] font-medium mb-0.5" style={{color:msg.role==='agent'?'#007AFF':'#FF9500'}}>{msg.role==='agent'?'经纪人':'HR'}</p>
+                          <p className="text-[12px] text-[#1D1D1F] leading-relaxed">{msg.text}</p>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="pt-2 border-t border-gray-200">
+                      <button className="text-[12px] text-[#FF9500] font-medium">⚠️ 觉得回答不好？点击矫正 Agent 话术</button>
+                    </div>
+                  </motion.div>
+                )}
+                {/* Actions */}
+                <div className="px-5 pb-5 flex gap-2">
+                  {opp.intent==='面试邀约' ? (
+                    <>
+                      <motion.button className="flex-1 h-11 bg-[#FF2D55] text-white rounded-xl text-[14px] font-semibold" whileTap={{scale:0.98}}>确认参加面试</motion.button>
+                      <motion.button className="h-11 px-4 bg-[#F5F5F7] text-[#86868B] rounded-xl text-[13px] font-medium" whileTap={{scale:0.98}}>换时间</motion.button>
+                      <motion.button className="h-11 px-4 bg-[#F5F5F7] text-[#86868B] rounded-xl text-[13px] font-medium" whileTap={{scale:0.98}}>拒绝</motion.button>
+                    </>
+                  ) : (
+                    <>
+                      <motion.button className="flex-1 h-11 bg-black text-white rounded-xl text-[14px] font-medium" whileTap={{scale:0.98}}>我亲自聊聊</motion.button>
+                      <motion.button className="h-11 px-5 bg-[#F5F5F7] text-[#86868B] rounded-xl text-[14px] font-medium" whileTap={{scale:0.98}}>不合适</motion.button>
+                    </>
+                  )}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    /* ============ Tab 2: Agent Chat ============ */
+    function AgentChatPage() {
+      const [msgs, setMsgs] = useState([
+        {id:1,role:'agent',text:'你好，我是你的数字分身经纪人。目前已经在 4 个平台上帮你搜索和沟通了。有什么需要我特别注意的吗？'},
+        {id:2,role:'user',text:'字节那个岗位怎么样？帮我重点跟进一下。'},
+        {id:3,role:'agent',text:'字节商业化团队那个岗位匹配度 95%，我已经和 HR 聊了两轮。对方很积极，确认双休和弹性工时。下一步建议安排线上面试，你看可以吗？'},
+        {id:4,role:'agent',type:'approval',title:'面试授权请求',desc:'字节跳动-商业化团队邀请线上技术面试，时间：下周三 14:00',options:['授权安排','换个时间','暂不面试']},
+        {id:5,role:'user',text:'可以，帮我安排吧。另外薪资谈判的时候，不要低于 28k。'},
+        {id:6,role:'agent',text:'收到。我已更新你的薪资底线为 28k（针对字节这个岗位）。面试已授权安排，我会协调具体时间并通知你。'},
+        {id:7,role:'agent',type:'approval',title:'简历信息授权',desc:'蚂蚁集团 HR 希望查看你的完整项目经历，需要你授权开放以下信息：项目列表、技术栈详情',options:['授权开放','仅开放部分','拒绝']},
+      ]);
+      const endRef = useRef(null);
+      useEffect(() => { endRef.current?.scrollIntoView({behavior:'smooth'}); }, [msgs]);
+      return (
+        <div className="flex flex-col h-screen bg-[#FAFAFA]">
+          <div className="sticky top-0 z-30 backdrop-blur-xl bg-white/80 border-b border-gray-100 px-5 pt-14 pb-4 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-black flex items-center justify-center"><span className="text-[13px] font-semibold text-white">A</span></div>
+            <div>
+              <p className="text-[16px] font-semibold text-[#1D1D1F]">我的经纪人</p>
+              <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 bg-[#34C759] rounded-full"/><span className="text-[12px] text-[#34C759]">在线 · 正在处理 3 个任务</span></div>
+            </div>
+          </div>
+          <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4 pb-28">
+            {msgs.map(msg => {
+              if (msg.type === 'approval') {
+                return (
+                  <motion.div key={msg.id} className="flex justify-start" initial={{opacity:0,y:12}} animate={{opacity:1,y:0}}>
+                    <div className="bg-white rounded-2xl rounded-tl-sm border border-gray-100 p-4 max-w-[90%]" style={{boxShadow:'0 4px 15px rgb(0,0,0,0.04)'}}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FF9500" strokeWidth="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                        <span className="text-[13px] font-semibold text-[#FF9500]">需要你的授权</span>
+                      </div>
+                      <p className="text-[14px] font-medium text-[#1D1D1F] mb-1">{msg.title}</p>
+                      <p className="text-[13px] text-[#86868B] leading-relaxed mb-3">{msg.desc}</p>
+                      <div className="flex flex-col gap-2">
+                        {msg.options.map((opt,oi) => (
+                          <motion.button key={oi} className={`w-full h-10 rounded-xl text-[13px] font-medium ${oi===0?'bg-black text-white':'bg-[#F5F5F7] text-[#1D1D1F]'}`} whileTap={{scale:0.98}}>{opt}</motion.button>
+                        ))}
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              }
+              return (
+                <motion.div key={msg.id} className={`flex ${msg.role==='user'?'justify-end':'justify-start'}`} initial={{opacity:0,y:12}} animate={{opacity:1,y:0}}>
+                  {msg.role==='agent' ? (
+                    <div className="bg-[#F5F5F7] text-[#1D1D1F] rounded-2xl rounded-tl-sm px-4 py-3 max-w-[85%]"><p className="text-[15px] leading-relaxed">{msg.text}</p></div>
+                  ) : (
+                    <div className="bg-black text-white rounded-2xl rounded-tr-sm px-4 py-3 max-w-[80%]"><p className="text-[15px] leading-relaxed">{msg.text}</p></div>
+                  )}
+                </motion.div>
+              );
+            })}
+            <div ref={endRef}/>
+          </div>
+          {/* Input */}
+          <div className="fixed bottom-20 left-1/2 -translate-x-1/2 w-full max-w-[430px] px-4 pb-3 pt-2 bg-[#FAFAFA] z-30">
+            <div className="flex items-center gap-3 bg-white rounded-2xl border border-gray-100 px-4 py-3" style={{boxShadow:'0 8px 30px rgb(0,0,0,0.04)'}}>
+              <input type="text" placeholder="给经纪人下达指令..." className="flex-1 text-[15px] text-[#1D1D1F] placeholder-[#86868B] bg-transparent outline-none"/>
+              <button className="w-8 h-8 bg-black rounded-full flex items-center justify-center flex-shrink-0">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* ============ Tab 3: Assets (Personal Archive) ============ */
+    function AssetPage() {
+      const [activeSection, setActiveSection] = useState('profile');
+      const profile = {name:'张明远',title:'高级 Java 后端开发',years:'5 年',education:'985 本科 · 计算机科学',location:'北京'};
+      const attributes = [
+        {cat:'核心技能',items:['微服务架构 Lv5','高并发处理 Lv4','系统设计 Lv4','团队管理 Lv3','DevOps Lv3']},
+        {cat:'行业认知',items:['互联网广告','电商交易','支付安全','内容推荐']},
+        {cat:'性格特质',items:['结果导向','逻辑清晰','沟通主动','抗压能力强']},
+      ];
+      const preferences = [{label:'薪资底线',value:'25k（字节岗位 28k）'},{label:'工作制度',value:'严格双休'},{label:'城市偏好',value:'北京优先，上海可接受'},{label:'出差态度',value:'短期可以，长期驻场不行'},{label:'管理意愿',value:'希望带团队'},{label:'禁忌事项',value:'不接受 996 / 大小周'}];
+      const versions = [{ver:'v3.2',time:'今天 10:30',desc:'更新字节岗位薪资底线为 28k'},{ver:'v3.1',time:'昨天 14:20',desc:'新增蚂蚁集团为目标企业'},{ver:'v3.0',time:'3天前',desc:'完成 onboarding，初始档案生成'},{ver:'v2.0',time:'3天前',desc:'经纪人深度问答完成，偏好录入'},{ver:'v1.0',time:'3天前',desc:'简历上传与解析'}];
+      const relations = [{name:'当前公司',relation:'在职（计划离开）',note:'晋升通道受阻'},{name:'前东家-电商平台',relation:'2年工作经历',note:'已屏蔽'},{name:'字节跳动',relation:'目标企业',note:'高意向沟通中'},{name:'蚂蚁集团',relation:'目标企业',note:'初步接触'}];
+      const sections = [{key:'profile',label:'基础信息'},{key:'attrs',label:'能力属性'},{key:'prefs',label:'偏好设置'},{key:'relations',label:'关系图谱'},{key:'versions',label:'变更记录'}];
+      return (
+        <div className="min-h-screen bg-[#FAFAFA] pb-24">
+          <div className="sticky top-0 z-30 backdrop-blur-xl bg-white/80 border-b border-gray-100 px-5 pt-14 pb-4">
+            <h1 className="text-[22px] font-semibold text-[#1D1D1F]">我的档案</h1>
+            <p className="text-[13px] text-[#86868B] mt-1">比简历更懂你的职业数字身份</p>
+          </div>
+          {/* Section Tabs */}
+          <div className="px-5 pt-4 pb-2 flex gap-2 overflow-x-auto">
+            {sections.map(s => (
+              <button key={s.key} className={`px-4 py-2 rounded-full text-[13px] font-medium whitespace-nowrap transition-all ${activeSection===s.key?'bg-black text-white':'bg-white text-[#86868B] border border-gray-100'}`} onClick={() => setActiveSection(s.key)}>{s.label}</button>
+            ))}
+          </div>
+          <div className="px-5 pt-3">
+            {activeSection === 'profile' && (
+              <motion.div initial={{opacity:0}} animate={{opacity:1}}>
+                <div className="bg-white rounded-3xl border border-gray-100 p-5 mb-4" style={{boxShadow:'0 8px 30px rgb(0,0,0,0.04)'}}>
+                  <div className="flex items-center gap-4 mb-5">
+                    <div className="w-16 h-16 rounded-2xl bg-black flex items-center justify-center"><span className="text-white text-[22px] font-bold">张</span></div>
+                    <div>
+                      <p className="text-[18px] font-semibold text-[#1D1D1F]">{profile.name}</p>
+                      <p className="text-[14px] text-[#86868B]">{profile.title}</p>
+                      <p className="text-[12px] text-[#86868B]">{profile.years} · {profile.education}</p>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    {[{l:'所在城市',v:profile.location},{l:'教育背景',v:profile.education},{l:'工作年限',v:profile.years},{l:'档案版本',v:'v3.2'},{l:'最近更新',v:'今天 10:30'}].map(item => (
+                      <div key={item.l} className="flex justify-between items-center py-1.5">
+                        <span className="text-[13px] text-[#86868B]">{item.l}</span>
+                        <span className="text-[14px] text-[#1D1D1F] font-medium">{item.v}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <p className="text-[12px] text-[#86868B] text-center">这不是简历，是 Agent 对你的全面理解</p>
+              </motion.div>
+            )}
+            {activeSection === 'attrs' && (
+              <motion.div className="space-y-4" initial={{opacity:0}} animate={{opacity:1}}>
+                {attributes.map(group => (
+                  <div key={group.cat} className="bg-white rounded-2xl border border-gray-100 p-4" style={{boxShadow:'0 4px 15px rgb(0,0,0,0.03)'}}>
+                    <p className="text-[13px] text-[#86868B] mb-3">{group.cat}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {group.items.map(item => (
+                        <span key={item} className="px-3 py-1.5 bg-[#F5F5F7] rounded-lg text-[13px] text-[#1D1D1F] font-medium">{item}</span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </motion.div>
+            )}
+            {activeSection === 'prefs' && (
+              <motion.div initial={{opacity:0}} animate={{opacity:1}}>
+                <div className="bg-white rounded-3xl border border-gray-100 p-5" style={{boxShadow:'0 8px 30px rgb(0,0,0,0.04)'}}>
+                  {preferences.map((p,i) => (
+                    <div key={p.label} className={`flex justify-between items-start py-3 ${i<preferences.length-1?'border-b border-gray-50':''}`}>
+                      <span className="text-[13px] text-[#86868B] flex-shrink-0">{p.label}</span>
+                      <span className="text-[14px] text-[#1D1D1F] font-medium text-right ml-4">{p.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+            {activeSection === 'relations' && (
+              <motion.div className="space-y-3" initial={{opacity:0}} animate={{opacity:1}}>
+                {relations.map(r => (
+                  <div key={r.name} className="bg-white rounded-2xl border border-gray-100 p-4 flex items-center justify-between" style={{boxShadow:'0 4px 15px rgb(0,0,0,0.03)'}}>
+                    <div>
+                      <p className="text-[14px] font-medium text-[#1D1D1F]">{r.name}</p>
+                      <p className="text-[12px] text-[#86868B]">{r.relation}</p>
+                    </div>
+                    <span className="text-[12px] text-[#86868B] bg-[#F5F5F7] px-2.5 py-1 rounded-full">{r.note}</span>
+                  </div>
+                ))}
+              </motion.div>
+            )}
+            {activeSection === 'versions' && (
+              <motion.div initial={{opacity:0}} animate={{opacity:1}}>
+                <div className="relative pl-5">
+                  {versions.map((v,i) => (
+                    <div key={v.ver} className="relative pb-5 last:pb-0">
+                      {i < versions.length-1 && <div className="absolute left-[-13px] top-3 w-px h-full bg-gray-200"/>}
+                      <div className="absolute left-[-16px] top-1.5 w-2 h-2 rounded-full bg-[#007AFF] border-2 border-white" style={{boxShadow:'0 0 0 2px #E5E5EA'}}/>
+                      <div className="bg-white rounded-xl border border-gray-100 p-3" style={{boxShadow:'0 2px 8px rgb(0,0,0,0.03)'}}>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[12px] font-semibold text-[#007AFF]">{v.ver}</span>
+                          <span className="text-[11px] text-[#86868B]">{v.time}</span>
+                        </div>
+                        <p className="text-[13px] text-[#1D1D1F]">{v.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    /* ============ Dashboard ============ */
+    function DashboardPage() {
+      const [activeTab,setActiveTab]=useState(0);
+      const content = () => {
+        switch(activeTab) {
+          case 0: return <OverviewPage/>;
+          case 1: return <OpportunitiesFeed/>;
+          case 2: return <AgentChatPage/>;
+          case 3: return <AssetPage/>;
+          default: return <OverviewPage/>;
+        }
+      };
+      return (<div className="relative">{content()}<BottomTabBar activeTab={activeTab} onTabChange={setActiveTab}/></div>);
+    }
+
+    /* ============ App ============ */
+    function App() {
+      const [page,setPage]=useState('landing');
+      return (
+        <div className="mx-auto max-w-[430px] min-h-screen bg-[#FAFAFA] relative overflow-hidden" style={{boxShadow:'0 0 60px rgba(0,0,0,0.08)'}}>
+          <AnimatePresence mode="wait">
+            {page==='landing'&&<motion.div key="l" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0,x:-50}} transition={{duration:0.3}}><LandingPage onNavigate={setPage}/></motion.div>}
+            {page==='ob-upload'&&<motion.div key="ou" initial={{opacity:0,x:50}} animate={{opacity:1,x:0}} exit={{opacity:0,x:-50}} transition={{duration:0.3}}><OBUpload onNavigate={setPage}/></motion.div>}
+            {page==='ob-parse'&&<motion.div key="op" initial={{opacity:0,x:50}} animate={{opacity:1,x:0}} exit={{opacity:0,x:-50}} transition={{duration:0.3}}><OBParse onNavigate={setPage}/></motion.div>}
+            {page==='ob-agent-hello'&&<motion.div key="oah" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} transition={{duration:0.4}}><OBAgentHello onNavigate={setPage}/></motion.div>}
+            {page==='ob-agent-intro'&&<motion.div key="oai" initial={{opacity:0,x:50}} animate={{opacity:1,x:0}} exit={{opacity:0,x:-50}} transition={{duration:0.3}}><OBAgentIntro onNavigate={setPage}/></motion.div>}
+            {page==='ob-deepqa'&&<motion.div key="odq" initial={{opacity:0,x:50}} animate={{opacity:1,x:0}} exit={{opacity:0,x:-50}} transition={{duration:0.3}}><OBDeepQA onNavigate={setPage}/></motion.div>}
+            {page==='aha'&&<motion.div key="a" initial={{opacity:0,scale:0.95}} animate={{opacity:1,scale:1}} exit={{opacity:0}} transition={{duration:0.4}}><AhaMomentPage onNavigate={setPage}/></motion.div>}
+            {page==='privacy'&&<motion.div key="p" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} transition={{duration:0.4}}><PrivacyPage onNavigate={setPage}/></motion.div>}
+            {page==='dispatch'&&<motion.div key="dp" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} transition={{duration:0.4}}><DispatchPage onNavigate={setPage}/></motion.div>}
+            {page==='dashboard'&&<motion.div key="d" initial={{opacity:0,x:50}} animate={{opacity:1,x:0}} transition={{duration:0.3}}><DashboardPage/></motion.div>}
+          </AnimatePresence>
+        </div>
+      );
+    }
+
+    const root=ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App/>);
+  </script>
+</body>
+</html>
