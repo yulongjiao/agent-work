@@ -305,7 +305,8 @@ function OverviewPage({ inboxTasks, onDismissTask }: { inboxTasks: InboxTask[]; 
     setEditingKey(null);
   };
 
-  /* ── chat state ── */
+  /* ── chat sheet state ── */
+  const [chatOpen, setChatOpen] = useState(false);
   const [chatMsgs, setChatMsgs] = useState<{ id: number; role: "agent" | "user"; text: string }[]>([
       { id: -4, role: "agent", text: "上面几个事项帮你整理好了，优先处理字节的面试邀请。" },
       { id: -3, role: "user", text: "字节那个优先级高一些，薪资可以再谈谈" },
@@ -313,11 +314,10 @@ function OverviewPage({ inboxTasks, onDismissTask }: { inboxTasks: InboxTask[]; 
       { id: -1, role: "agent", text: "另外，你对远程办公有偏好吗？有几个不错的机会支持 remote，要不要也帮你留意一下？" },
     ]);
   const [chatInput, setChatInput] = useState("");
-    const [voiceMode, setVoiceMode] = useState(false);
   const [chatTyping, setChatTyping] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chatMsgs, chatTyping, inboxTasks]);
+  useEffect(() => { if (chatOpen) chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chatMsgs, chatTyping, chatOpen]);
 
   const agentReplies = [
     "收到，我马上帮你处理。有新进展会第一时间通知你。",
@@ -458,54 +458,40 @@ function OverviewPage({ inboxTasks, onDismissTask }: { inboxTasks: InboxTask[]; 
         <div className="h-[1px] bg-gradient-to-r from-transparent via-black/[0.06] to-transparent" />
       </div>
 
-      {/* ── Scrollable Conversation ── */}
+      {/* ── Scrollable Task List ── */}
       <div className="flex-1 overflow-y-auto">
-        <div className="px-5 pt-4 space-y-3 pb-36">
-          {/* Task cards (current pending items) */}
+        <div className="px-5 pt-4 space-y-3 pb-28">
+          {/* Section: 待处理 */}
+          {actionableTasks.length > 0 && (
+            <p className="text-[11px] font-medium text-[#8E8E93] uppercase tracking-wider px-1">待处理 · {actionableTasks.length} 项</p>
+          )}
           <AnimatePresence>
-            {inboxTasks.map((task) => {
+            {actionableTasks.map((task) => {
               const tc = typeConfig[task.type];
               return (
-                <motion.div key={task.id} layout className="flex items-start gap-2.5" initial={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9, x: -30, transition: { duration: 0.35 } }} animate={resolvingId === task.id ? { opacity: [1, 0.4], scale: [1, 0.95], transition: { duration: 0.3 } } : {}}>
-                  {/* Agent avatar */}
-                  <div className="w-7 h-7 rounded-full bg-[#1D1D1F] flex items-center justify-center flex-shrink-0 mt-1" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.1)" }}>
-                    <span className="text-[9px] font-bold text-white">A.</span>
-                  </div>
-                  {/* Bubble */}
-                  <div className="flex-1 min-w-0">
-                    <div className="rounded-2xl rounded-tl-md overflow-hidden cursor-pointer" style={{ background: "rgba(255,255,255,0.75)", backdropFilter: "blur(20px) saturate(180%)", WebkitBackdropFilter: "blur(20px) saturate(180%)", boxShadow: "0 1px 8px rgba(0,0,0,0.04), inset 0 0 0 0.5px rgba(255,255,255,0.5)" }} onClick={() => task.company && router.push(`/dashboard/chat/${task.id}`)}>
-                      <div className="px-4 py-3">
-                        {/* Badge + Time */}
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-1.5">
-                            <div className="w-[6px] h-[6px] rounded-full" style={{ backgroundColor: tc.dotColor }} />
-                            <span className="text-[11px] text-[#8E8E93] font-medium">{tc.badge}</span>
-                          </div>
-                          {task.time && <span className="text-[11px] text-[#AEAEB2]">{task.time}</span>}
-                        </div>
-                        {/* Company */}
-                        {task.company && (
-                          <p className="text-[15px] font-semibold text-[#1D1D1F] tracking-tight mb-1">
-                            {task.company}{task.team ? ` · ${task.team}` : ""}{task.salary ? <span className="text-[12px] text-[#8E8E93] font-normal ml-1.5">{task.salary}</span> : null}
-                          </p>
-                        )}
-                        {/* P0 */}
-                        {task.type === "P0_HARD_DECISION" && task.alert && <p className="text-[14px] text-[#1D1D1F] leading-[1.5] mb-3">{task.alert}</p>}
-                        {/* P1 */}
-                        {task.type === "P1_TRADE_OFF" && <div className="mb-3">{task.conflictPoint && <p className="text-[14px] font-medium text-[#1D1D1F] leading-[1.5] mb-1">{task.conflictPoint}</p>}{task.agentCalc && <p className="text-[13px] text-[#8E8E93] leading-[1.6]">{task.agentCalc}</p>}</div>}
-                        {/* P2 */}
-                        {task.type === "P2_KNOWLEDGE_GAP" && <div className="mb-3">{task.hrQuestion && <div className="mb-2"><p className="text-[11px] text-[#AEAEB2] mb-0.5">对方提问</p><p className="text-[14px] text-[#1D1D1F] leading-[1.5]">{task.hrQuestion}</p></div>}{task.agentDraft && <div><p className="text-[11px] text-[#AEAEB2] mb-0.5">我拟的草稿</p><p className="text-[13px] text-[#8E8E93] leading-[1.6] bg-black/[0.03] rounded-xl px-3 py-2">{task.agentDraft}</p></div>}</div>}
-                        {/* INFO */}
-                        {task.type === "INFO_REPORT" && <div className="mb-2">{task.infoTitle && <p className="text-[14px] font-medium text-[#1D1D1F] mb-0.5">{task.infoTitle}</p>}{task.infoBody && <p className="text-[13px] text-[#8E8E93] leading-[1.5]">{task.infoBody}</p>}</div>}
-                        {/* Actions */}
-                        <div className="flex gap-2 mt-1" onClick={e => e.stopPropagation()}>
-                          {task.actions.map((act) => (
-                            <motion.button key={act.label} className={`h-[36px] rounded-xl text-[13px] font-medium px-3 ${act.primary ? "flex-1 bg-[#1D1D1F] text-white" : act.danger ? "text-[#8E8E93]" : "flex-1 bg-black/[0.04] text-[#1D1D1F]"}`} style={act.primary ? { boxShadow: "0 1px 6px rgba(0,0,0,0.1)" } : {}} whileTap={{ scale: 0.97 }} onClick={() => handleResolve(task.id, act.label)}>
-                              {act.label}
-                            </motion.button>
-                          ))}
-                        </div>
+                <motion.div key={task.id} layout className="rounded-2xl overflow-hidden cursor-pointer" style={{ background: "rgba(255,255,255,0.75)", backdropFilter: "blur(20px) saturate(180%)", WebkitBackdropFilter: "blur(20px) saturate(180%)", boxShadow: "0 1px 8px rgba(0,0,0,0.04), inset 0 0 0 0.5px rgba(255,255,255,0.5)" }} initial={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9, x: -30, transition: { duration: 0.35 } }} animate={resolvingId === task.id ? { opacity: [1, 0.4], scale: [1, 0.95], transition: { duration: 0.3 } } : {}} onClick={() => task.company && router.push(`/dashboard/chat/${task.id}`)}>
+                  <div className="px-4 py-3.5">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-1.5">
+                        <div className="w-[6px] h-[6px] rounded-full" style={{ backgroundColor: tc.dotColor }} />
+                        <span className="text-[11px] text-[#8E8E93] font-medium">{tc.badge}</span>
                       </div>
+                      {task.time && <span className="text-[11px] text-[#AEAEB2]">{task.time}</span>}
+                    </div>
+                    {task.company && (
+                      <p className="text-[15px] font-semibold text-[#1D1D1F] tracking-tight mb-1">
+                        {task.company}{task.team ? ` · ${task.team}` : ""}{task.salary ? <span className="text-[12px] text-[#8E8E93] font-normal ml-1.5">{task.salary}</span> : null}
+                      </p>
+                    )}
+                    {task.type === "P0_HARD_DECISION" && task.alert && <p className="text-[14px] text-[#1D1D1F] leading-[1.5] mb-3">{task.alert}</p>}
+                    {task.type === "P1_TRADE_OFF" && <div className="mb-3">{task.conflictPoint && <p className="text-[14px] font-medium text-[#1D1D1F] leading-[1.5] mb-1">{task.conflictPoint}</p>}{task.agentCalc && <p className="text-[13px] text-[#8E8E93] leading-[1.6]">{task.agentCalc}</p>}</div>}
+                    {task.type === "P2_KNOWLEDGE_GAP" && <div className="mb-3">{task.hrQuestion && <div className="mb-2"><p className="text-[11px] text-[#AEAEB2] mb-0.5">对方提问</p><p className="text-[14px] text-[#1D1D1F] leading-[1.5]">{task.hrQuestion}</p></div>}{task.agentDraft && <div><p className="text-[11px] text-[#AEAEB2] mb-0.5">我拟的草稿</p><p className="text-[13px] text-[#8E8E93] leading-[1.6] bg-black/[0.03] rounded-xl px-3 py-2">{task.agentDraft}</p></div>}</div>}
+                    <div className="flex gap-2 mt-1" onClick={e => e.stopPropagation()}>
+                      {task.actions.map((act) => (
+                        <motion.button key={act.label} className={`h-[36px] rounded-xl text-[13px] font-medium px-3 ${act.primary ? "flex-1 bg-[#1D1D1F] text-white" : act.danger ? "text-[#8E8E93]" : "flex-1 bg-black/[0.04] text-[#1D1D1F]"}`} style={act.primary ? { boxShadow: "0 1px 6px rgba(0,0,0,0.1)" } : {}} whileTap={{ scale: 0.97 }} onClick={() => handleResolve(task.id, act.label)}>
+                            {act.label}
+                          </motion.button>
+                      ))}
                     </div>
                   </div>
                 </motion.div>
@@ -513,94 +499,121 @@ function OverviewPage({ inboxTasks, onDismissTask }: { inboxTasks: InboxTask[]; 
             })}
           </AnimatePresence>
 
-          {inboxTasks.length === 0 && chatMsgs.length === 0 && (
-            <div className="flex items-start gap-2.5">
-              <div className="w-7 h-7 rounded-full bg-[#1D1D1F] flex items-center justify-center flex-shrink-0 mt-1"><span className="text-[9px] font-bold text-white">A.</span></div>
-              <div className="rounded-2xl rounded-tl-md px-4 py-3" style={{ background: "rgba(255,255,255,0.75)", backdropFilter: "blur(20px)", boxShadow: "0 1px 6px rgba(0,0,0,0.03), inset 0 0 0 0.5px rgba(255,255,255,0.5)" }}>
-                <p className="text-[14px] text-[#8E8E93] leading-relaxed">全部处理完毕 ✓ 有新进展我会立即通知你。</p>
-              </div>
-            </div>
+          {/* Section: 简报 */}
+          {infoTasks.length > 0 && (
+            <>
+              <p className="text-[11px] font-medium text-[#8E8E93] uppercase tracking-wider px-1 pt-2">简报</p>
+              {infoTasks.map((task) => {
+                const tc = typeConfig[task.type];
+                return (
+                  <div key={task.id} className="rounded-2xl overflow-hidden" style={{ background: "rgba(255,255,255,0.75)", backdropFilter: "blur(20px) saturate(180%)", boxShadow: "0 1px 8px rgba(0,0,0,0.04), inset 0 0 0 0.5px rgba(255,255,255,0.5)" }}>
+                    <div className="px-4 py-3.5">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-[6px] h-[6px] rounded-full" style={{ backgroundColor: tc.dotColor }} />
+                          <span className="text-[11px] text-[#8E8E93] font-medium">{tc.badge}</span>
+                        </div>
+                        {task.time && <span className="text-[11px] text-[#AEAEB2]">{task.time}</span>}
+                      </div>
+                      {task.infoTitle && <p className="text-[14px] font-medium text-[#1D1D1F] mb-0.5">{task.infoTitle}</p>}
+                      {task.infoBody && <p className="text-[13px] text-[#8E8E93] leading-[1.5]">{task.infoBody}</p>}
+                    </div>
+                  </div>
+                );
+              })}
+            </>
           )}
 
-          {chatMsgs.filter(m => m.id < 0).map((msg) => (
-            <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "items-start gap-2.5"}`}>
-              {msg.role === "agent" && (
-                <div className="w-7 h-7 rounded-full bg-[#1D1D1F] flex items-center justify-center flex-shrink-0 mt-1"><span className="text-[9px] font-bold text-white">A.</span></div>
-              )}
-              {msg.role === "agent" ? (
-                <div className="rounded-2xl rounded-tl-md px-4 py-3 max-w-[80%]" style={{ background: "rgba(255,255,255,0.75)", backdropFilter: "blur(20px)", boxShadow: "0 1px 6px rgba(0,0,0,0.03), inset 0 0 0 0.5px rgba(255,255,255,0.5)" }}><p className="text-[14px] text-[#1D1D1F] leading-relaxed">{msg.text}</p></div>
-              ) : (
-                <div className="bg-[#1D1D1F] rounded-2xl rounded-tr-md px-4 py-3 max-w-[78%]" style={{ boxShadow: "0 1px 8px rgba(0,0,0,0.08)" }}><p className="text-[14px] text-white leading-relaxed">{msg.text}</p></div>
-              )}
+          {/* Empty state */}
+          {inboxTasks.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-16">
+              <div className="w-14 h-14 rounded-full bg-[#34C759]/10 flex items-center justify-center mb-4">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#34C759" strokeWidth="2"><path d="M20 6 9 17l-5-5"/></svg>
+              </div>
+              <p className="text-[15px] font-medium text-[#1D1D1F] mb-1">全部处理完毕</p>
+              <p className="text-[13px] text-[#8E8E93]">有新进展我会立即通知你</p>
             </div>
-          ))}
+          )}
+        </div>
+      </div>
 
-          {chatMsgs.filter(m => m.id >= 0).map((msg) => (
-            <motion.div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "items-start gap-2.5"}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
-              {msg.role === "agent" && (
-                <div className="w-7 h-7 rounded-full bg-[#1D1D1F] flex items-center justify-center flex-shrink-0 mt-1"><span className="text-[9px] font-bold text-white">A.</span></div>
-              )}
-              {msg.role === "agent" ? (
-                <div className="rounded-2xl rounded-tl-md px-4 py-3 max-w-[80%]" style={{ background: "rgba(255,255,255,0.75)", backdropFilter: "blur(20px)", boxShadow: "0 1px 6px rgba(0,0,0,0.03), inset 0 0 0 0.5px rgba(255,255,255,0.5)" }}><p className="text-[14px] text-[#1D1D1F] leading-relaxed">{msg.text}</p></div>
-              ) : (
-                <div className="bg-[#1D1D1F] rounded-2xl rounded-tr-md px-4 py-3 max-w-[78%]" style={{ boxShadow: "0 1px 8px rgba(0,0,0,0.08)" }}><p className="text-[14px] text-white leading-relaxed">{msg.text}</p></div>
-              )}
-            </motion.div>
-          ))}
+      {/* ── FAB: Chat with Agent ── */}
+      <motion.button
+        className="fixed z-40 flex items-center gap-2 h-[48px] px-5 rounded-full bg-[#1D1D1F] text-white"
+        style={{ bottom: 88, right: "calc(50% - 215px + 20px)", boxShadow: "0 4px 20px rgba(0,0,0,0.2)" }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => setChatOpen(true)}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span className="text-[14px] font-medium">和经纪人聊聊</span>
+      </motion.button>
 
-          {chatTyping && (
-            <motion.div className="flex items-start gap-2.5" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <div className="w-7 h-7 rounded-full bg-[#1D1D1F] flex items-center justify-center flex-shrink-0 mt-1"><span className="text-[9px] font-bold text-white">A.</span></div>
-              <div className="rounded-2xl rounded-tl-md px-4 py-3" style={{ background: "rgba(255,255,255,0.75)", backdropFilter: "blur(20px)", boxShadow: "0 1px 6px rgba(0,0,0,0.03)" }}>
-                <div className="flex gap-1 items-center h-[20px]">
-                  <motion.div className="w-1.5 h-1.5 bg-[#AEAEB2] rounded-full" animate={{ y: [0, -3, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0 }} />
-                  <motion.div className="w-1.5 h-1.5 bg-[#AEAEB2] rounded-full" animate={{ y: [0, -3, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.15 }} />
-                  <motion.div className="w-1.5 h-1.5 bg-[#AEAEB2] rounded-full" animate={{ y: [0, -3, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.3 }} />
+      {/* ── Chat Sheet ── */}
+      <AnimatePresence>
+        {chatOpen && (
+          <>
+            <motion.div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-[2px]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }} onClick={() => setChatOpen(false)} />
+            <motion.div className="fixed bottom-0 left-1/2 z-50 w-[430px]" style={{ x: "-50%" }} initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", stiffness: 380, damping: 36 }}>
+              <div className="bg-[#F8F8FA] rounded-t-[24px] overflow-hidden flex flex-col" style={{ height: "65vh", boxShadow: "0 -8px 50px rgba(0,0,0,0.12)" }}>
+                <div className="flex-shrink-0">
+                  <div className="flex justify-center pt-3 pb-1"><div className="w-9 h-[4px] rounded-full bg-black/10" /></div>
+                  <div className="flex items-center justify-between px-5 pt-1 pb-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-full bg-[#1D1D1F] flex items-center justify-center"><span className="text-[10px] font-bold text-white">A.</span></div>
+                      <div>
+                        <p className="text-[15px] font-semibold text-[#1D1D1F]">我的经纪人</p>
+                        <div className="flex items-center gap-1"><div className="w-[5px] h-[5px] rounded-full bg-[#32D74B]" /><span className="text-[11px] text-[#32D74B]">在线</span></div>
+                      </div>
+                    </div>
+                    <motion.button className="w-8 h-8 rounded-full bg-black/5 flex items-center justify-center" onClick={() => setChatOpen(false)} whileTap={{ scale: 0.9 }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#86868B" strokeWidth="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                    </motion.button>
+                  </div>
+                </div>
+                <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+                  {chatMsgs.map((msg) => (
+                    <motion.div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "items-start gap-2"}`} initial={msg.id >= 0 ? { opacity: 0, y: 8 } : false} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
+                      {msg.role === "agent" && <div className="w-6 h-6 rounded-full bg-[#1D1D1F] flex items-center justify-center flex-shrink-0 mt-1"><span className="text-[8px] font-bold text-white">A.</span></div>}
+                      {msg.role === "agent" ? (
+                        <div className="rounded-2xl rounded-tl-md px-3.5 py-2.5 max-w-[80%]" style={{ background: "rgba(255,255,255,0.8)", boxShadow: "0 1px 4px rgba(0,0,0,0.03)" }}><p className="text-[14px] text-[#1D1D1F] leading-relaxed">{msg.text}</p></div>
+                      ) : (
+                        <div className="bg-[#1D1D1F] rounded-2xl rounded-tr-md px-3.5 py-2.5 max-w-[78%]"><p className="text-[14px] text-white leading-relaxed">{msg.text}</p></div>
+                      )}
+                    </motion.div>
+                  ))}
+                  {chatTyping && (
+                    <div className="flex items-start gap-2">
+                      <div className="w-6 h-6 rounded-full bg-[#1D1D1F] flex items-center justify-center flex-shrink-0 mt-1"><span className="text-[8px] font-bold text-white">A.</span></div>
+                      <div className="rounded-2xl rounded-tl-md px-3.5 py-2.5" style={{ background: "rgba(255,255,255,0.8)" }}>
+                        <div className="flex gap-1 items-center h-[20px]">
+                          <motion.div className="w-1.5 h-1.5 bg-[#AEAEB2] rounded-full" animate={{ y: [0, -3, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0 }} />
+                          <motion.div className="w-1.5 h-1.5 bg-[#AEAEB2] rounded-full" animate={{ y: [0, -3, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.15 }} />
+                          <motion.div className="w-1.5 h-1.5 bg-[#AEAEB2] rounded-full" animate={{ y: [0, -3, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.3 }} />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <div ref={chatEndRef} />
+                </div>
+                <div className="flex-shrink-0 px-4 pb-6 pt-2 border-t border-black/[0.04]">
+                  <div className="flex items-end gap-2.5">
+                    <div className="flex-1 flex items-end rounded-2xl px-4 py-2.5" style={{ background: "rgba(255,255,255,0.8)", boxShadow: "0 1px 8px rgba(0,0,0,0.04), inset 0 0 0 0.5px rgba(0,0,0,0.04)", minHeight: "42px" }}>
+                      <input type="text" placeholder="给经纪人说点什么..." className="flex-1 text-[15px] text-[#1D1D1F] placeholder-[#AEAEB2] bg-transparent outline-none leading-[1.4]" value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === "Enter" && chatInput.trim() && handleSendChat()} autoFocus />
+                    </div>
+                    <AnimatePresence>
+                      {chatInput.trim() && (
+                        <motion.button className="flex-shrink-0 w-[38px] h-[38px] rounded-full bg-[#1D1D1F] flex items-center justify-center" style={{ boxShadow: "0 2px 10px rgba(0,0,0,0.12)" }} initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.5 }} transition={{ type: "spring", stiffness: 400, damping: 20 }} whileTap={{ scale: 0.85 }} onClick={handleSendChat}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><path d="M12 19V5" /><path d="m5 12 7-7 7 7" /></svg>
+                        </motion.button>
+                      )}
+                    </AnimatePresence>
+                  </div>
                 </div>
               </div>
             </motion.div>
-          )}
-
-          <div ref={chatEndRef} />
-        </div>
-      </div>
-
-      {/* ── Fixed Input Bar ── */}
-      <div className="fixed bottom-[68px] left-1/2 -translate-x-1/2 w-[430px] px-5 pb-3 pt-4 z-30" style={{ background: "linear-gradient(to top, #F5F5F7 65%, transparent)" }}>
-        <div className="flex items-end gap-2.5">
-          {/* Voice toggle button */}
-          <motion.button className="flex-shrink-0 w-[38px] h-[38px] rounded-full flex items-center justify-center" style={{ backgroundColor: voiceMode ? "#1D1D1F" : "rgba(0,0,0,0.04)" }} whileTap={{ scale: 0.9 }} onClick={() => setVoiceMode(!voiceMode)}>
-            {voiceMode ? (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round"><path d="M4 7h3l4-4v18l-4-4H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z"/><path d="M15 9a3 3 0 0 1 0 6"/></svg>
-            ) : (
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" strokeWidth="1.8" strokeLinecap="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
-            )}
-          </motion.button>
-
-          {/* Input area */}
-          <AnimatePresence mode="wait">
-            {voiceMode ? (
-              <motion.button key="voice" className="flex-1 h-[42px] rounded-2xl flex items-center justify-center text-[14px] font-medium text-[#8E8E93] active:bg-black/[0.06] transition-colors" style={{ background: "rgba(255,255,255,0.75)", backdropFilter: "blur(30px) saturate(180%)", WebkitBackdropFilter: "blur(30px) saturate(180%)", boxShadow: "0 1px 12px rgba(0,0,0,0.05), inset 0 0 0 0.5px rgba(255,255,255,0.6)" }} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.15 }}>
-                按住说话
-              </motion.button>
-            ) : (
-              <motion.div key="text" className="flex-1 flex items-end rounded-2xl px-4 py-2.5" style={{ background: "rgba(255,255,255,0.75)", backdropFilter: "blur(30px) saturate(180%)", WebkitBackdropFilter: "blur(30px) saturate(180%)", boxShadow: "0 1px 12px rgba(0,0,0,0.05), inset 0 0 0 0.5px rgba(255,255,255,0.6)", minHeight: "42px" }} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.15 }}>
-                <input type="text" placeholder="给经纪人说点什么..." className="flex-1 text-[15px] text-[#1D1D1F] placeholder-[#AEAEB2] bg-transparent outline-none leading-[1.4]" value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === "Enter" && chatInput.trim() && handleSendChat()} />
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Send button — only visible when has text */}
-          <AnimatePresence>
-            {chatInput.trim() && !voiceMode && (
-              <motion.button className="flex-shrink-0 w-[38px] h-[38px] rounded-full bg-[#1D1D1F] flex items-center justify-center" style={{ boxShadow: "0 2px 10px rgba(0,0,0,0.12)" }} initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.5 }} transition={{ type: "spring", stiffness: 400, damping: 20 }} whileTap={{ scale: 0.85 }} onClick={handleSendChat}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><path d="M12 19V5" /><path d="m5 12 7-7 7 7" /></svg>
-              </motion.button>
-            )}
-          </AnimatePresence>
-        </div>
-      </div>
-
+          </>
+        )}
+      </AnimatePresence>
       {/* 意图参数 Bottom Sheet */}
       <AnimatePresence>
         {intentExpand && (
@@ -1302,60 +1315,180 @@ function AssetPage() {
 
 /* ============ Incomplete State: Overview ============ */
 function IncompleteOverview({ onContinue }: { onContinue: () => void }) {
+  const [animStep, setAnimStep] = useState(0);
+  useEffect(() => {
+    const timers = [
+      setTimeout(() => setAnimStep(1), 400),
+      setTimeout(() => setAnimStep(2), 900),
+      setTimeout(() => setAnimStep(3), 1500),
+      setTimeout(() => setAnimStep(4), 2200),
+    ];
+    return () => timers.forEach(clearTimeout);
+  }, []);
+
+  const demoCity = "深圳";
+  const demoRole = "前端开发工程师";
+  const simStats = { companies: 2847, browsed: 1203, chatted: 89, recommended: 12 };
+
+  const demoRecommendations = [
+    { company: "字节跳动", team: "抖音电商 · 前端架构组", salary: "45-65K", score: 95, reason: "技术栈高度匹配，团队正在扩招，面试通过率高", status: "沟通中" as const },
+    { company: "蚂蚁集团", team: "支付宝 · 体验技术部", salary: "40-60K", score: 88, reason: "大厂背景加分，base 匹配，晋升空间大", status: "已推荐" as const },
+    { company: "美团", team: "外卖 · C端研发组", salary: "35-55K", score: 82, reason: "业务增长快，技术挑战多，期权激励好", status: "等待回复" as const },
+  ];
+
+  const statusStyles: Record<string, { bg: string; text: string; dot: string }> = {
+    "沟通中": { bg: "rgba(52,199,75,0.08)", text: "#34C759", dot: "#34C759" },
+    "已推荐": { bg: "rgba(0,122,255,0.08)", text: "#007AFF", dot: "#007AFF" },
+    "等待回复": { bg: "rgba(255,149,0,0.08)", text: "#FF9F0A", dot: "#FF9F0A" },
+  };
+
   return (
     <div className="min-h-screen bg-[#FAFAFA] pb-24">
+      {/* 顶部 header */}
       <div className="sticky top-0 z-30 backdrop-blur-xl bg-white/80 border-b border-gray-100 px-5 pt-14 pb-4">
         <h1 className="text-[22px] font-semibold text-[#1D1D1F]">概览</h1>
       </div>
 
-      {/* 意图未确认提示 */}
+      {/* 模拟场景头部 */}
       <div className="px-5 pt-5">
         <motion.div
-          className="bg-white/70 backdrop-blur-xl rounded-[20px] border border-[#FF9500]/20 relative z-10"
-          style={{ boxShadow: "0 2px 20px rgba(255,149,0,0.08), 0 0 0 0.5px rgba(255,149,0,0.1)" }}
-          initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+          className="rounded-[20px] overflow-hidden"
+          style={{ background: "linear-gradient(135deg, #1D1D1F 0%, #2C2C2E 100%)", boxShadow: "0 4px 24px rgba(0,0,0,0.12)" }}
+          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
         >
-          <div className="px-5 pt-4 pb-4">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-2 h-2 rounded-full bg-[#FF9500] animate-slow-blink" />
-              <p className="text-[11px] font-medium text-[#FF9500] uppercase tracking-wider">意图未确认</p>
+          <div className="px-5 pt-5 pb-5">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.287 1.288L3 12l5.8 1.9a2 2 0 0 1 1.288 1.287L12 21l1.9-5.8a2 2 0 0 1 1.287-1.288L21 12l-5.8-1.9a2 2 0 0 1-1.288-1.287Z" /></svg>
+              </div>
+              <div>
+                <p className="text-[13px] text-white/50">模拟演示</p>
+                <p className="text-[15px] font-medium text-white">{demoCity} · {demoRole}</p>
+              </div>
             </div>
-            <p className="text-[16px] font-semibold text-[#1D1D1F] leading-[1.4] tracking-tight mb-2">经纪人尚未启动</p>
-            <p className="text-[14px] text-[#86868B] leading-relaxed mb-4">需要完善你的档案，告诉经纪人你在找什么样的工作，才能开始帮你寻找机会。</p>
-            <motion.button
-              className="w-full h-[44px] bg-[#1D1D1F] text-white rounded-[12px] text-[15px] font-medium"
-              whileTap={{ scale: 0.97 }}
-              onClick={onContinue}
+
+            {/* 漏斗数据 */}
+            <div className="flex items-stretch gap-0">
+              {[
+                { label: "家企业招聘中", value: simStats.companies, delay: 0.2 },
+                { label: "个岗位已浏览", value: simStats.browsed, delay: 0.5 },
+                { label: "家已主动沟通", value: simStats.chatted, delay: 0.8 },
+                { label: "个值得推荐", value: simStats.recommended, delay: 1.1 },
+              ].map((item, i) => (
+                <motion.div
+                  key={i}
+                  className="flex-1 flex flex-col items-center py-2"
+                  style={i < 3 ? { borderRight: "1px solid rgba(255,255,255,0.06)" } : {}}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={animStep >= 1 ? { opacity: 1, y: 0 } : {}}
+                  transition={{ delay: item.delay, duration: 0.4 }}
+                >
+                  <span className="text-[20px] font-bold text-white tracking-tight" style={{ fontFeatureSettings: "'tnum'" }}>
+                    {animStep >= 2 ? item.value.toLocaleString() : "—"}
+                  </span>
+                  <span className="text-[10px] text-white/40 mt-0.5">{item.label}</span>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* 连接线 */}
+            <motion.div
+              className="flex items-center justify-center gap-1 mt-3"
+              initial={{ opacity: 0 }} animate={animStep >= 2 ? { opacity: 1 } : {}} transition={{ delay: 0.3 }}
             >
-              继续完善档案
-            </motion.button>
+              {[0,1,2].map(i => (
+                <motion.div key={i} className="h-[1px] flex-1 bg-gradient-to-r from-transparent via-white/15 to-transparent"
+                  initial={{ scaleX: 0 }} animate={animStep >= 2 ? { scaleX: 1 } : {}} transition={{ delay: 0.4 + i * 0.15, duration: 0.5 }} />
+              ))}
+            </motion.div>
+
+            {/* 结论摘要 */}
+            <motion.div
+              className="mt-4 rounded-xl px-4 py-3"
+              style={{ background: "rgba(255,255,255,0.06)", backdropFilter: "blur(10px)" }}
+              initial={{ opacity: 0, y: 8 }} animate={animStep >= 3 ? { opacity: 1, y: 0 } : {}} transition={{ duration: 0.4 }}
+            >
+              <p className="text-[12px] text-white/40 mb-1.5">AI 经纪人沟通结论</p>
+              <p className="text-[13px] text-white/80 leading-relaxed">
+                {demoCity}前端岗位活跃度高，当前有 <span className="text-white font-medium">{simStats.recommended} 个优质机会</span> 值得关注。
+                其中字节跳动、蚂蚁集团技术栈匹配度最高，建议优先沟通。
+              </p>
+            </motion.div>
           </div>
         </motion.div>
       </div>
 
-      {/* 空数据工作简报 */}
-      <div className="px-5 pt-3">
-        <div className="bg-white/70 backdrop-blur-xl rounded-[16px] px-5 py-4" style={{ boxShadow: "0 1px 10px rgba(0,0,0,0.03), 0 0 0 0.5px rgba(0,0,0,0.03)" }}>
-          <p className="text-[13px] text-[#86868B] mb-2">你的经纪人替你</p>
-          <div className="flex items-baseline gap-0 flex-wrap">
-            <span className="text-[13px] text-[#86868B]">浏览了</span>
-            <span className="text-[17px] font-bold tracking-tight text-[#E5E5EA] mx-1" style={{ fontFeatureSettings: "'tnum'" }}>—</span>
-            <span className="text-[13px] text-[#86868B] ml-0.5">个岗位</span>
-            <span className="text-[#E5E5EA] mx-2">|</span>
-            <span className="text-[13px] text-[#86868B]">沟通</span>
-            <span className="text-[17px] font-bold tracking-tight text-[#E5E5EA] mx-1" style={{ fontFeatureSettings: "'tnum'" }}>—</span>
-            <span className="text-[#E5E5EA] mx-2">|</span>
-            <span className="text-[13px] text-[#86868B]">拦截</span>
-            <span className="text-[17px] font-bold tracking-tight text-[#E5E5EA] mx-1" style={{ fontFeatureSettings: "'tnum'" }}>—</span>
-          </div>
+      {/* AI 推荐卡片 */}
+      <div className="px-5 pt-4">
+        <motion.p className="text-[11px] font-medium text-[#86868B] uppercase tracking-wider mb-3"
+          initial={{ opacity: 0 }} animate={animStep >= 3 ? { opacity: 1 } : {}} transition={{ delay: 0.2 }}>
+          AI 推荐岗位
+        </motion.p>
+        <div className="space-y-3">
+          {demoRecommendations.map((rec, idx) => {
+            const ss = statusStyles[rec.status];
+            return (
+              <motion.div
+                key={idx}
+                className="bg-white/70 backdrop-blur-xl rounded-[16px] overflow-hidden"
+                style={{ boxShadow: "0 2px 16px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.04)" }}
+                initial={{ opacity: 0, y: 12 }}
+                animate={animStep >= 4 ? { opacity: 1, y: 0 } : {}}
+                transition={{ delay: idx * 0.12, duration: 0.4 }}
+              >
+                <div className="px-4 py-3.5">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <p className="text-[15px] font-semibold text-[#1D1D1F] tracking-tight">{rec.company}</p>
+                        <div className="flex items-center gap-1 px-2 py-0.5 rounded-full" style={{ background: "rgba(255,149,10,0.08)" }}>
+                          <span className="text-[11px] font-bold text-[#FF9F0A]" style={{ fontFeatureSettings: "'tnum'" }}>TOP {rec.score}</span>
+                        </div>
+                      </div>
+                      <p className="text-[12px] text-[#86868B]">{rec.team}</p>
+                    </div>
+                    <div className="flex items-center gap-1 px-2 py-1 rounded-full flex-shrink-0" style={{ background: ss.bg }}>
+                      <div className="w-[5px] h-[5px] rounded-full" style={{ background: ss.dot }} />
+                      <span className="text-[11px] font-medium" style={{ color: ss.text }}>{rec.status}</span>
+                    </div>
+                  </div>
+                  <p className="text-[14px] font-medium text-[#1D1D1F] mb-1.5">{rec.salary}</p>
+                  <div className="flex items-start gap-1.5">
+                    <svg className="w-3 h-3 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="#FF9F0A" strokeWidth="2"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.287 1.288L3 12l5.8 1.9a2 2 0 0 1 1.288 1.287L12 21l1.9-5.8a2 2 0 0 1 1.287-1.288L21 12l-5.8-1.9a2 2 0 0 1-1.288-1.287Z" /></svg>
+                    <p className="text-[12px] text-[#86868B] leading-relaxed">{rec.reason}</p>
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
         </div>
       </div>
 
-      {/* 空待处理 */}
-      <div className="px-5 pt-5 pb-2">
-        <p className="text-[11px] font-medium text-[#86868B] uppercase tracking-wider mb-3">待处理</p>
-        <div className="bg-white/70 backdrop-blur-xl rounded-[18px] p-6 flex flex-col items-center" style={{ boxShadow: "0 2px 20px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.03)" }}>
-          <p className="text-[14px] text-[#C7C7CC]">完善档案后，经纪人将为你处理任务</p>
+      {/* 浮动遮罩 CTA */}
+      <div className="fixed bottom-20 left-1/2 -translate-x-1/2 w-[430px] z-30" style={{ height: "50vh" }}>
+        <div className="absolute inset-0 flex flex-col" style={{ background: "linear-gradient(to bottom, rgba(250,250,250,0) 0%, rgba(250,250,250,0.85) 20%, rgba(250,250,250,0.98) 40%, rgba(250,250,250,1) 50%)" }}>
+          <div className="flex-1" />
+          <div className="px-8 pb-8 flex flex-col items-center">
+            <p className="text-[13px] text-[#86868B] mb-1">以上为模拟数据</p>
+            <h3 className="text-[20px] font-bold text-[#1D1D1F] tracking-tight mb-2">创建你的经纪人</h3>
+            <p className="text-[14px] text-[#86868B] text-center leading-relaxed mb-5">获取真实推荐，让 AI 经纪人替你谈</p>
+            <div className="flex items-center gap-4 mb-6">
+              {["24h 全自动寻找", "AI 智能谈判", "隐私安全保障"].map((v) => (
+                <div key={v} className="flex items-center gap-1.5">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34C759" strokeWidth="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+                  <span className="text-[12px] text-[#1D1D1F] font-medium">{v}</span>
+                </div>
+              ))}
+            </div>
+            <motion.button
+              className="w-full h-[52px] bg-[#1D1D1F] text-white rounded-2xl text-[16px] font-semibold tracking-tight"
+              whileTap={{ scale: 0.97 }}
+              onClick={onContinue}
+              style={{ boxShadow: "0 4px 20px rgba(0,0,0,0.2)" }}
+            >
+              创建 AI 经纪人
+            </motion.button>
+          </div>
         </div>
       </div>
     </div>
