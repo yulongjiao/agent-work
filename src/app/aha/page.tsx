@@ -37,7 +37,14 @@ export default function AhaMomentPage() {
   const allDecided = strategy1 !== "pending" && strategy2 !== "pending";
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] px-5 pt-16 pb-28">
+    <div className="min-h-screen bg-[#FAFAFA] px-5 pt-16 pb-28 relative">
+      <motion.button
+        className="absolute top-14 left-5 w-8 h-8 flex items-center justify-center rounded-full bg-black/[0.04] z-20"
+        whileTap={{ scale: 0.9 }}
+        onClick={() => router.back()}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1D1D1F" strokeWidth="2"><path d="m15 18-6-6 6-6" /></svg>
+      </motion.button>
       <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6, type: "spring" }}>
         <div className="text-center mb-8">
           <motion.p className="text-[11px] text-[#86868B] font-medium uppercase tracking-wider mb-2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>CAREER MIRROR</motion.p>
@@ -109,7 +116,7 @@ export default function AhaMomentPage() {
                   </div>
                   {strategy1 !== "pending" && (
                     <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${strategy1 === "accepted" ? "text-[#34C759] bg-[#34C759]/10" : "text-[#86868B] bg-[#F5F5F7]"}`}>
-                      {strategy1 === "accepted" ? "已同意" : "已保留"}
+                      {strategy1 === "accepted" ? "已隐藏 Python 标签" : "保留 Python 标签展示"}
                     </span>
                   )}
                 </div>
@@ -146,7 +153,7 @@ export default function AhaMomentPage() {
                   </div>
                   {strategy2 !== "pending" && (
                     <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full ${strategy2 === "accepted" ? "text-[#34C759] bg-[#34C759]/10" : "text-[#86868B] bg-[#F5F5F7]"}`}>
-                      {strategy2 === "accepted" ? "已授权" : "已调整"}
+                      {strategy2 === "accepted" ? "锚点 28k 已生效" : "将使用保守锚点"}
                     </span>
                   )}
                 </div>

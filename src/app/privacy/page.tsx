@@ -21,7 +21,14 @@ export default function PrivacyPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#0A0A0A] px-5 pt-14 pb-28">
+    <div className="min-h-screen bg-[#0A0A0A] px-5 pt-14 pb-28 relative">
+      <motion.button
+        className="absolute top-14 right-5 w-8 h-8 flex items-center justify-center rounded-full bg-white/10 z-20"
+        whileTap={{ scale: 0.9 }}
+        onClick={() => router.back()}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="m15 18-6-6 6-6" /></svg>
+      </motion.button>
       <motion.div className="flex items-center gap-3 mb-2" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" /></svg>
         <h1 className="text-[22px] font-semibold text-white">私密空间</h1>

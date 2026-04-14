@@ -42,7 +42,7 @@ export default function OBDeepQAPage() {
             <p className="text-[12px] text-[#34C759]">经纪人提问中</p>
           </div>
         </div>
-        <motion.button className="text-[14px] text-[#86868B] font-medium px-3 py-1" whileTap={{ scale: 0.95 }} onClick={() => router.push("/dashboard?incomplete=1")}>
+        <motion.button className="text-[14px] text-[#86868B] font-medium px-3 py-1" whileTap={{ scale: 0.95 }} onClick={() => router.push("/dashboard")}>
           稍后再说
         </motion.button>
       </div>

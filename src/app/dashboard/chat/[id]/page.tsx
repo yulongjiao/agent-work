@@ -164,6 +164,7 @@ export default function ChatDetailPage() {
   const data = chatData[id];
   const [inputText, setInputText] = useState("");
   const [isVoice, setIsVoice] = useState(false);
+  const [localItems, setLocalItems] = useState<ChatItem[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -181,6 +182,23 @@ export default function ChatDetailPage() {
   }
 
   const { job, items } = data;
+  const allItems = [...items, ...localItems];
+
+  const handleSend = () => {
+    if (!inputText.trim()) return;
+    const newMsg: ChatItem = {
+      kind: "msg",
+      id: Date.now(),
+      sender: "candidate",
+      senderType: "human",
+      text: inputText,
+    };
+    setLocalItems(prev => [...prev, newMsg]);
+    setInputText("");
+    setTimeout(() => {
+      if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }, 50);
+  };
 
   return (
     <div className="min-h-screen bg-[#F5F5F7] flex flex-col">
@@ -238,7 +256,7 @@ export default function ChatDetailPage() {
           </div>
 
           <div className="space-y-3">
-            {items.map((item, i) => {
+            {allItems.map((item, i) => {
               if (item.kind === "time") {
                 return (
                   <div key={`time-${item.id}`} className="flex items-center gap-3 py-2">
@@ -354,6 +372,7 @@ export default function ChatDetailPage() {
                   type="text"
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSend()}
                   placeholder="真人介入，发送消息..."
                   className="w-full h-9 bg-[#F5F5F7] rounded-full px-4 text-[14px] text-[#1D1D1F] placeholder:text-[#C7C7CC] outline-none focus:ring-2 focus:ring-[#007AFF]/20 transition-shadow"
                 />
@@ -365,6 +384,7 @@ export default function ChatDetailPage() {
               <motion.button
                 className="w-9 h-9 flex items-center justify-center rounded-full bg-[#1D1D1F] flex-shrink-0"
                 whileTap={{ scale: 0.9 }}
+                onClick={handleSend}
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0, opacity: 0 }}

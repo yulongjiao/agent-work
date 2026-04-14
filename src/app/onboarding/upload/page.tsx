@@ -17,7 +17,14 @@ export default function OBUploadPage() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen px-8 bg-[#FAFAFA]">
+    <div className="flex flex-col items-center justify-center min-h-screen px-8 bg-[#FAFAFA] relative">
+      <motion.button
+        className="absolute top-14 left-5 w-8 h-8 flex items-center justify-center rounded-full bg-black/[0.04]"
+        whileTap={{ scale: 0.9 }}
+        onClick={() => router.back()}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1D1D1F" strokeWidth="2"><path d="m15 18-6-6 6-6" /></svg>
+      </motion.button>
       <motion.div className="text-center w-full" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
         <motion.div className="w-20 h-20 rounded-3xl bg-black flex items-center justify-center mx-auto mb-8" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", delay: 0.2 }}>
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /><path d="M14 2v4a2 2 0 0 0 2 2h4" /></svg>

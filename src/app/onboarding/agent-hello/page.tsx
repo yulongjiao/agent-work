@@ -7,17 +7,23 @@ import { useRouter } from "next/navigation";
 export default function OBAgentHelloPage() {
   const router = useRouter();
   const [phase, setPhase] = useState(0);
+  const skipRef = { current: false };
 
   useEffect(() => {
     const t1 = setTimeout(() => setPhase(1), 800);
     const t2 = setTimeout(() => setPhase(2), 2200);
     const t3 = setTimeout(() => setPhase(3), 3500);
-    const t4 = setTimeout(() => router.push("/onboarding/deep-qa"), 5500);
+    const t4 = setTimeout(() => { if (!skipRef.current) router.push("/onboarding/deep-qa"); }, 5500);
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); };
   }, [router]);
 
+  const handleSkip = () => {
+    skipRef.current = true;
+    router.push("/onboarding/deep-qa");
+  };
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-[#FAFAFA] px-8">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-[#FAFAFA] px-8 cursor-pointer" onClick={handleSkip}>
       <motion.div className="relative w-24 h-24 mb-10" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200, damping: 15 }}>
         <div className="w-24 h-24 rounded-full bg-black flex items-center justify-center">
           <span className="text-white text-[28px] font-semibold">A</span>
@@ -44,6 +50,14 @@ export default function OBAgentHelloPage() {
           <div className="w-2 h-2 bg-[#86868B] rounded-full typing-dot-3" />
         </motion.div>
       )}
+      <motion.p
+        className="absolute bottom-16 text-[12px] text-[#C7C7CC]"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 2 }}
+      >
+        点击任意位置跳过
+      </motion.p>
     </div>
   );
 }

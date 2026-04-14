@@ -37,7 +37,7 @@ export default function LoginPage() {
     success();
     // 模拟登录
     setTimeout(() => {
-      router.push("/onboarding/upload");
+      router.push("/onboarding/setup");
     }, 1000);
   };
 
@@ -147,7 +147,7 @@ export default function LoginPage() {
         <motion.button
           className="w-full h-[44px] text-[15px] text-[#86868B] font-medium mt-3"
           whileTap={{ scale: 0.97 }}
-          onClick={() => router.push("/dashboard?incomplete=1")}
+          onClick={() => router.push("/dashboard")}
         >
           暂不登录，先看看
         </motion.button>

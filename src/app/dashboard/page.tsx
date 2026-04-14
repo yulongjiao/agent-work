@@ -32,7 +32,7 @@ function BottomTabBar({ activeTab, onTabChange, pendingCount = 0 }: { activeTab:
   const tabs = [
     { icon: IconHome, label: "概览", badge: pendingCount },
     { icon: IconSparkles, label: "机会" },
-    { icon: IconMessage, label: "经纪人" },
+    { icon: IconMessage, label: "消息" },
     { icon: IconUserTab, label: "资产" },
   ];
   return (
@@ -117,96 +117,158 @@ const initialInboxTasks: InboxTask[] = [
   },
 ];
 
-/* ============ Opportunity Pipeline States (Tab 1) ============ */
-type OppState = "SCOUTING" | "NEGOTIATING" | "SUSPENDED" | "HUMAN_TAKEOVER" | "DEAD_END";
-interface Opportunity {
+/* ============ Recommended Jobs (Tab 1) ============ */
+type JobStatus = "new" | "interested" | "chatting" | "passed";
+interface RecommendedJob {
   id: number;
   company: string;
   team: string;
   salary: string;
-  match: number;
-  state: OppState;
-  // SCOUTING - aggregated, not individual
-  // NEGOTIATING
-  progress?: string;
-  lastUpdate?: string;
-  chatPreview?: string;
-  // SUSPENDED
-  suspendReason?: string;
-  linkedTaskId?: number; // maps to InboxTask
-  // HUMAN_TAKEOVER
-  milestone?: string;
-  agentTip?: string;
-  // DEAD_END
-  deathCause?: string;
+  location: string;
+  headcount: number;
+  aiScore: number;
+  aiReason: string;
+  aiAnalysis: string;
+  jdSummary: string;
+  requirements: string[];
+  chatHistory: { role: "agent" | "hr"; text: string }[];
+  suggestedMessages: string[];
+  status: JobStatus;
 }
 
-const scoutingCount = 45;
-const initialOpps: Opportunity[] = [
-  // NEGOTIATING (L1)
-  { id: 101, company: "腾讯", team: "微信支付", salary: "30-42k", match: 82, state: "NEGOTIATING",
-    progress: "已确认作息匹配 → 正在拉扯薪资期望", lastUpdate: "Agent 10:30 回复，等待 HR 确认边界",
-    chatPreview: "C-Agent：我们候选人期望 30k 起，贵方预算范围？\nB-Agent：28-42k 弹性区间，需面试后定级。" },
-  { id: 102, company: "快手", team: "商业化中台", salary: "26-33k", match: 80, state: "NEGOTIATING",
-    progress: "初筛通过 → 技术栈匹配 → 薪资初步对齐", lastUpdate: "HR 确认一面通过，二面安排中",
-    chatPreview: "C-Agent：候选人对大小周有顾虑。\nB-Agent：我们已转为弹性双休制。" },
-  { id: 103, company: "小红书", team: "社区技术", salary: "27-34k", match: 85, state: "NEGOTIATING",
-    progress: "远程办公政策确认中", lastUpdate: "Agent 正在与 HR 沟通混合办公细节" },
-  // SUSPENDED (L2)
-  { id: 201, company: "美团", team: "到店事业群", salary: "23k×16薪", match: 88, state: "SUSPENDED",
-    suspendReason: "薪资 Base 低于底线，待用户决策是否降标", linkedTaskId: 2 },
-  { id: 202, company: "蚂蚁集团", team: "支付安全", salary: "30-40k", match: 91, state: "SUSPENDED",
-    suspendReason: "HR 提问超出预设档案，待用户审核回复草稿", linkedTaskId: 3 },
-  // HUMAN_TAKEOVER (L3)
-  { id: 301, company: "字节跳动", team: "商业化团队", salary: "28-35k", match: 95, state: "HUMAN_TAKEOVER",
-    milestone: "线上技术面：下周二 14:00", agentTip: "该团队近半年扩招 40%，面试通过率约 35%。建议重点准备系统设计题，面试官偏好先画架构图。" },
-  // DEAD_END
-  { id: 401, company: "百度", team: "搜索技术", salary: "25-30k", match: 70, state: "DEAD_END",
-    deathCause: "薪资上限无法满足 · 用户主动放弃" },
-  { id: 402, company: "网易", team: "云音乐后端", salary: "22-28k", match: 65, state: "DEAD_END",
-    deathCause: "脉脉风评过差 · Agent 自动拦截" },
-  { id: 403, company: "拼多多", team: "社交电商", salary: "30-45k", match: 60, state: "DEAD_END",
-    deathCause: "二面未通过 · 算法题表现不佳" },
+const initialRecommendedJobs: RecommendedJob[] = [
+  {
+    id: 1, company: "字节跳动", team: "商业化团队", salary: "28-35k", location: "北京", headcount: 3,
+    aiScore: 95, aiReason: "技术栈高度匹配，团队扩招期，面试通过率高",
+    aiAnalysis: "该岗位要求的微服务架构和高并发处理与你的核心技能完全吻合。团队近半年扩招 40%，HC 充足，面试流程较快。薪资范围覆盖你的预期上限，谈判空间大。团队 leader 偏好有支付/交易经验的候选人，你的背景非常契合。",
+    jdSummary: "负责商业化广告投放系统的后端架构设计与核心模块开发，支撑日均千万级广告请求。",
+    requirements: ["5年以上 Java 后端经验", "熟悉微服务架构和分布式系统", "有高并发场景实战经验", "了解广告投放或推荐系统优先"],
+    chatHistory: [
+      { role: "agent", text: "你好，我这边有一位候选人，5年 Java 后端经验，擅长微服务架构和高并发处理，目前在看新机会。" },
+      { role: "hr", text: "可以的，我们商业化团队正在招高级后端，能发一份简历过来看看吗？" },
+      { role: "agent", text: "简历稍后发送。想先确认一下，贵团队的作息制度和薪资范围方便透露吗？" },
+      { role: "hr", text: "双休弹性工时，薪资 28-35k，具体面试后定级。我们 HC 比较多，流程会快。" },
+    ],
+    suggestedMessages: ["你好，我对这个岗位很感兴趣，方便聊聊具体的技术栈和团队情况吗？", "我有丰富的高并发和微服务经验，希望能进一步了解岗位细节。", "请问面试流程大概是怎样的？"],
+    status: "new",
+  },
+  {
+    id: 2, company: "蚂蚁集团", team: "支付安全", salary: "30-40k", location: "杭州", headcount: 2,
+    aiScore: 92, aiReason: "支付领域深度匹配，薪资上限高，技术挑战大",
+    aiAnalysis: "你主导过支付网关微服务拆分，日均交易量提升 4 倍的经历和该岗位高度相关。蚂蚁的技术氛围浓厚，团队对安全合规有深入研究。薪资范围在你的预期之上，年终奖系数稳定在 4-6 个月。杭州的生活成本低于北京，实际购买力更强。",
+    jdSummary: "负责支付安全核心链路的架构升级，保障亿级日交易的资金安全与合规。",
+    requirements: ["5年以上后端开发经验", "有支付/金融系统开发经验", "熟悉风控体系和安全合规", "优秀的系统设计能力"],
+    chatHistory: [
+      { role: "agent", text: "您好，推荐一位在支付领域有深厚经验的候选人，曾主导支付网关微服务拆分，日均交易量从 50 万提升到 200 万。" },
+      { role: "hr", text: "经历很匹配！我们支付安全团队正缺这样的人。方便安排线上聊一下吗？" },
+      { role: "agent", text: "非常乐意。候选人比较关注团队的技术方向和薪资结构，能先介绍一下吗？" },
+      { role: "hr", text: "我们专注交易链路安全，技术栈是 Java + 自研中间件。薪资 30-40k，年终 4-6 个月。" },
+    ],
+    suggestedMessages: ["我在支付网关领域有很多实战经验，想深入了解贵团队的安全架构。", "请问团队目前在做哪些方向的技术升级？"],
+    status: "new",
+  },
+  {
+    id: 3, company: "美团", team: "到店事业群", salary: "25-33k", location: "北京", headcount: 5,
+    aiScore: 88, aiReason: "业务场景丰富，HC 充足，成长空间大",
+    aiAnalysis: "美团到店业务日活过亿，技术场景复杂度高。该团队正在做架构升级，需要有分布式经验的高级工程师。HC 充足意味着竞争相对小，入职确定性高。薪资中位数对标市场 75 分位。唯一不足是薪资下限略低于你的预期底线。",
+    jdSummary: "负责到店商家平台核心系统的架构设计和性能优化，支撑百万级商家的日常运营。",
+    requirements: ["4年以上 Java 开发经验", "分布式系统设计经验", "良好的沟通协作能力", "有电商或 O2O 经验优先"],
+    chatHistory: [
+      { role: "agent", text: "你好，推荐一位高级 Java 后端工程师，5年经验，擅长分布式架构，对电商和交易系统有深入理解。" },
+      { role: "hr", text: "我们正在扩招，这个方向很需要人。简历发过来我们快速看一下。" },
+    ],
+    suggestedMessages: ["到店业务的架构升级具体在做什么方向？", "团队目前的技术栈和基础设施是怎样的？"],
+    status: "interested",
+  },
+  {
+    id: 4, company: "小红书", team: "社区技术", salary: "27-34k", location: "上海", headcount: 2,
+    aiScore: 85, aiReason: "技术氛围好，远程友好，年轻化团队",
+    aiAnalysis: "小红书社区技术团队以 Go + Java 双语言栈为主，你的 Java 背景可以直接上手。团队支持每周 1-2 天远程办公，work-life balance 较好。业务增长快，但上海的通勤成本需考虑。",
+    jdSummary: "负责社区内容分发系统的后端服务开发和优化，提升内容推荐的质量和效率。",
+    requirements: ["3年以上后端开发经验", "熟悉 Java 或 Go", "了解推荐系统或内容分发优先", "有社区产品开发经验优先"],
+    chatHistory: [
+      { role: "agent", text: "推荐一位全栈能力强的 Java 后端工程师，对内容分发和推荐系统有兴趣。" },
+      { role: "hr", text: "可以先投简历，我们筛选后安排面试。请问候选人对远程办公有偏好吗？" },
+      { role: "agent", text: "候选人对混合办公模式很感兴趣，这也是考虑贵司的一个重要因素。" },
+    ],
+    suggestedMessages: ["我对社区内容分发很感兴趣，想了解一下团队的技术架构。", "请问远程办公的具体政策是怎样的？"],
+    status: "new",
+  },
+  {
+    id: 5, company: "腾讯", team: "微信支付", salary: "30-42k", location: "深圳", headcount: 3,
+    aiScore: 82, aiReason: "大平台稳定，薪资天花板高，但需考虑城市",
+    aiAnalysis: "腾讯微信支付是国内顶级的支付团队，技术深度和广度都很高。薪资上限 42k 是目前所有机会中最高的。但深圳意味着需要考虑搬迁成本。团队稳定性好，晋升通道清晰。",
+    jdSummary: "参与微信支付核心交易链路的设计与开发，保障亿级用户的支付体验。",
+    requirements: ["5年以上后端开发经验", "有支付或金融系统经验", "熟悉高可用架构设计", "良好的抗压能力"],
+    chatHistory: [
+      { role: "agent", text: "这边有一位候选人，支付领域经验丰富，微服务架构能力强，期望薪资 30k 起。" },
+      { role: "hr", text: "背景不错，我们微信支付团队需要这样的人。预算 30-42k 区间，面试后定级。" },
+    ],
+    suggestedMessages: ["微信支付的技术栈和架构是怎样的？", "团队的工作节奏和加班情况如何？"],
+    status: "new",
+  },
 ];
 
-/* ============ Animated Number (ticking effect) ============ */
+/* ============ Chat Threads (Tab 2 - Messages) ============ */
+interface ChatThread {
+  id: number;
+  company: string;
+  team: string;
+  initial: string;
+  lastMessage: string;
+  lastTime: string;
+  unread: number;
+  color: string;
+}
+
+const initialChatThreads: ChatThread[] = [
+  { id: 1, company: "字节跳动", team: "商业化团队", initial: "字", lastMessage: "HR：双休弹性工时，薪资 28-35k，具体面试后定级。", lastTime: "刚刚", unread: 2, color: "#3B82F6" },
+  { id: 2, company: "蚂蚁集团", team: "支付安全", initial: "蚂", lastMessage: "HR：你上一段经历为什么只待了半年？", lastTime: "1小时前", unread: 1, color: "#1677FF" },
+  { id: 3, company: "美团", team: "到店事业群", initial: "美", lastMessage: "Agent：已发送候选人简历，等待HR反馈。", lastTime: "3小时前", unread: 0, color: "#FBBF24" },
+  { id: 4, company: "小红书", team: "社区技术", initial: "小", lastMessage: "HR：可以先投简历，我们筛选后安排面试。", lastTime: "昨天", unread: 0, color: "#EF4444" },
+  { id: 5, company: "腾讯", team: "微信支付", initial: "腾", lastMessage: "Agent：已与HR初步沟通，对方反馈积极。", lastTime: "昨天", unread: 0, color: "#22C55E" },
+];
+
+/* ============ Animated Number (smooth count-up on mount) ============ */
 function AnimatedNumber({ value, color }: { value: string; color: string }) {
-  const numericPart = parseInt(value.replace(/,/g, ""));
-  const [display, setDisplay] = useState(value);
+  const target = parseInt(value.replace(/,/g, ""));
+  const [display, setDisplay] = useState(0);
   useEffect(() => {
-    // 每隔几秒随机微增，给持续工作感
-    const interval = setInterval(() => {
-      const bump = Math.floor(Math.random() * 3) + 1;
-      const newVal = numericPart + bump;
-      setDisplay(newVal.toLocaleString());
-      setTimeout(() => setDisplay(value), 800); // 闪回原值
-    }, 4000 + Math.random() * 3000);
-    return () => clearInterval(interval);
-  }, [numericPart, value]);
+    const duration = 1200;
+    const steps = 30;
+    const increment = target / steps;
+    let current = 0;
+    let step = 0;
+    const timer = setInterval(() => {
+      step++;
+      current = Math.min(Math.round(increment * step), target);
+      setDisplay(current);
+      if (step >= steps) clearInterval(timer);
+    }, duration / steps);
+    return () => clearInterval(timer);
+  }, [target]);
   return (
     <motion.span
       className={`text-[17px] font-bold tracking-tight ${color} mx-1`}
       style={{ fontFeatureSettings: "'tnum'" }}
-      key={display}
-      initial={{ y: -2, opacity: 0.6 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.3 }}
     >
-      {display}
+      {display.toLocaleString()}
     </motion.span>
   );
 }
 
-/* ============ Tab 0: Overview ============ */
-function OverviewPage({ onSwitchToChat, inboxTasks, onDismissTask }: { onSwitchToChat: (prefill?: string) => void; inboxTasks: InboxTask[]; onDismissTask: (id: number) => void }) {
+/* ============ Tab 0: Overview — Agent Workbench ============ */
+function OverviewPage({ inboxTasks, onDismissTask }: { inboxTasks: InboxTask[]; onDismissTask: (id: number) => void }) {
   const router = useRouter();
   const [intentExpand, setIntentExpand] = useState(false);
   const [engineIdx, setEngineIdx] = useState(0);
-  const [engineMenuOpen, setEngineMenuOpen] = useState(false);
+    const [engineMenuOpen, setEngineMenuOpen] = useState(false);
   const [editingKey, setEditingKey] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [resolvingId, setResolvingId] = useState<number | null>(null);
   const engine = engineStates[engineIdx];
+  const [matchRate, setMatchRate] = useState(78);
+  const [matchExpand, setMatchExpand] = useState(false);
 
   const [coreIntent, setCoreIntent] = useState('寻找北京/广州的高级 Java 后端或架构师岗位');
   const [hardReqs, setHardReqs] = useState([
@@ -243,107 +305,300 @@ function OverviewPage({ onSwitchToChat, inboxTasks, onDismissTask }: { onSwitchT
     setEditingKey(null);
   };
 
+  /* ── chat state ── */
+  const [chatMsgs, setChatMsgs] = useState<{ id: number; role: "agent" | "user"; text: string }[]>([
+      { id: -4, role: "agent", text: "上面几个事项帮你整理好了，优先处理字节的面试邀请。" },
+      { id: -3, role: "user", text: "字节那个优先级高一些，薪资可以再谈谈" },
+      { id: -2, role: "agent", text: "收到，已把字节标为最高优先级。美团那边 16 薪结构其实不错，我帮你算了详细对比。" },
+      { id: -1, role: "agent", text: "另外，你对远程办公有偏好吗？有几个不错的机会支持 remote，要不要也帮你留意一下？" },
+    ]);
+  const [chatInput, setChatInput] = useState("");
+    const [voiceMode, setVoiceMode] = useState(false);
+  const [chatTyping, setChatTyping] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [chatMsgs, chatTyping, inboxTasks]);
+
+  const agentReplies = [
+    "收到，我马上帮你处理。有新进展会第一时间通知你。",
+    "明白了，我会重点关注这个方向。",
+    "好的，已记录你的偏好，后续筛选会优先考虑。",
+    "了解，我现在就去和对方沟通确认。",
+  ];
+
+  const handleSendChat = () => {
+    if (!chatInput.trim()) return;
+    setChatMsgs(prev => [...prev, { id: Date.now(), role: "user", text: chatInput }]);
+    setChatInput("");
+    setChatTyping(true);
+    setTimeout(() => {
+      setChatTyping(false);
+      const reply = agentReplies[Math.floor(Math.random() * agentReplies.length)];
+      setChatMsgs(prev => [...prev, { id: Date.now() + 1, role: "agent", text: reply }]);
+      setMatchRate(prev => Math.min(prev + 1, 99));
+    }, 1200);
+  };
+
   const handleChatAdjust = () => {
     setIntentExpand(false);
-    setTimeout(() => {
-      onSwitchToChat("我想调整一下意图参数，帮我优化当前的求职条件");
-    }, 200);
   };
 
   const actionableTasks = inboxTasks.filter(t => t.type !== "INFO_REPORT");
   const infoTasks = inboxTasks.filter(t => t.type === "INFO_REPORT");
 
-  const handleResolve = (id: number) => {
+  const handleResolve = (id: number, actionLabel?: string) => {
     setResolvingId(id);
+    const task = inboxTasks.find(t => t.id === id);
+    const confirmText = task?.company
+      ? `已执行「${actionLabel || "处理"}」—— ${task.company} 处理完成 ✓`
+      : "已处理 ✓";
     setTimeout(() => {
+      setChatMsgs(prev => [...prev, { id: Date.now(), role: "agent", text: confirmText }]);
       onDismissTask(id);
       setResolvingId(null);
-    }, 700);
+      setMatchRate(prev => Math.min(prev + 2, 99));
+    }, 600);
   };
 
-  const typeConfig: Record<TaskType, { badge: string; dotColor: string }> = {
-    P0_HARD_DECISION: { badge: "紧急决策", dotColor: "#FF3B30" },
-    P1_TRADE_OFF: { badge: "薪资博弈", dotColor: "#FF9500" },
-    P2_KNOWLEDGE_GAP: { badge: "待你回复", dotColor: "#007AFF" },
-    INFO_REPORT: { badge: "简报", dotColor: "#86868B" },
+  const typeConfig: Record<TaskType, { badge: string; dotColor: string; emoji: string }> = {
+    P0_HARD_DECISION: { badge: "紧急决策", dotColor: "#FF3B30", emoji: "🔴" },
+    P1_TRADE_OFF: { badge: "薪资博弈", dotColor: "#FF9500", emoji: "🟡" },
+    P2_KNOWLEDGE_GAP: { badge: "待你回复", dotColor: "#007AFF", emoji: "🔵" },
+    INFO_REPORT: { badge: "简报", dotColor: "#86868B", emoji: "📊" },
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] pb-24">
-      <div className="sticky top-0 z-30 backdrop-blur-xl bg-white/80 border-b border-gray-100 px-5 pt-14 pb-4">
-        <h1 className="text-[22px] font-semibold text-[#1D1D1F]">概览</h1>
-      </div>
+    <div className="flex flex-col h-screen bg-[#F5F5F7]">
+      {/* ── Fixed Top: Agent Header ── */}
+      <div className="sticky top-0 z-30 flex-shrink-0" style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.78) 100%)", backdropFilter: "blur(40px) saturate(180%)", WebkitBackdropFilter: "blur(40px) saturate(180%)" }}>
+        {/* safe area spacer */}
+        <div className="h-14" />
 
-      {/* 模块一：当前执行意图 Intent Control */}
-      <div className="px-5 pt-5">
-        <motion.div className="bg-white/70 backdrop-blur-xl rounded-[20px] border border-white/80 relative z-10" style={{ boxShadow: "0 2px 20px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.03)" }} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="px-5 pt-4 pb-4">
-            {/* 顶部行：引擎状态 */}
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-[11px] font-medium text-[#86868B] uppercase tracking-wider">执行意图</p>
-              {/* 引擎状态胶囊 */}
-              <div className="relative">
-                <motion.button
-                  className="flex items-center gap-1.5 h-[26px] px-2.5 rounded-full backdrop-blur-sm"
-                  style={{ backgroundColor: `${engine.color}0D`, border: `0.5px solid ${engine.color}25` }}
-                  onClick={() => setEngineMenuOpen(!engineMenuOpen)}
-                  whileTap={{ scale: 0.94 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                >
-                  <div className="relative flex items-center justify-center w-[7px] h-[7px]">
-                    <div className="w-[5px] h-[5px] rounded-full" style={{ backgroundColor: engine.color }} />
-                    {engine.dotAnim && <div className={`absolute w-[7px] h-[7px] rounded-full ${engine.dotAnim}`} style={{ backgroundColor: engine.color }} />}
-                  </div>
-                  <span className="text-[11px] font-medium tracking-tight" style={{ color: engine.color }}>{engine.label}</span>
-                  <motion.svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke={engine.color} strokeWidth="3" animate={{ rotate: engineMenuOpen ? 180 : 0 }} transition={{ type: "spring", stiffness: 400, damping: 25 }}><path d="m6 9 6 6 6-6"/></motion.svg>
-                </motion.button>
-                <AnimatePresence>
-                  {engineMenuOpen && (
-                    <>
-                      <motion.div className="fixed inset-0 z-40" onClick={() => setEngineMenuOpen(false)} />
-                      <motion.div
-                        className="absolute right-0 top-full mt-1.5 w-[140px] bg-white/90 backdrop-blur-2xl rounded-[14px] overflow-hidden z-50"
-                        style={{ boxShadow: "0 8px 40px rgba(0,0,0,0.14), 0 0 0 0.5px rgba(0,0,0,0.06)" }}
-                        initial={{ opacity: 0, scale: 0.9, y: -4 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.9, y: -4 }}
-                        transition={{ type: "spring", stiffness: 500, damping: 28 }}
-                      >
-                        {engineStates.map((s, i) => (
-                          <motion.button
-                            key={s.key}
-                            className={`w-full flex items-center gap-2.5 px-3.5 py-[10px] ${i < engineStates.length - 1 ? "border-b border-black/[0.04]" : ""}`}
-                            style={{ backgroundColor: engineIdx === i ? `${s.color}08` : "transparent" }}
-                            onClick={() => { setEngineIdx(i); setEngineMenuOpen(false); }}
-                            whileTap={{ scale: 0.97 }}
-                          >
-                            <div className="w-[6px] h-[6px] rounded-full" style={{ backgroundColor: s.color }} />
-                            <span className={`text-[13px] ${engineIdx === i ? "font-semibold text-[#1D1D1F]" : "font-normal text-[#86868B]"}`}>{s.label}</span>
-                            {engineIdx === i && (
-                              <svg className="ml-auto" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={s.color} strokeWidth="2.5"><path d="M20 6 9 17l-5-5"/></svg>
-                            )}
-                          </motion.button>
-                        ))}
-                      </motion.div>
-                    </>
-                  )}
-                </AnimatePresence>
+        {/* Row 1: Avatar + Name + Engine Status (top-right) */}
+        <div className="px-5 flex items-center gap-3 pb-3">
+          <div className="w-10 h-10 rounded-full bg-[#1D1D1F] flex items-center justify-center flex-shrink-0" style={{ boxShadow: "0 2px 10px rgba(0,0,0,0.1)" }}>
+            <span className="text-[13px] font-bold text-white tracking-tight">A.</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[16px] font-semibold text-[#1D1D1F] tracking-tight leading-tight">我的经纪人</p>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <div className="relative w-[5px] h-[5px]">
+                <div className="w-[5px] h-[5px] rounded-full bg-[#32D74B]/80" />
+                <div className="absolute inset-0 w-[5px] h-[5px] rounded-full bg-[#32D74B]/40 animate-ping" />
               </div>
-            </div>
-            {/* 意图描述 + 调整按钮 */}
-            <div className="flex items-start justify-between gap-3">
-              <p className="text-[16px] font-semibold text-[#1D1D1F] leading-[1.4] tracking-tight flex-1">{coreIntent}</p>
-              <motion.button
-                className="flex-shrink-0 mt-0.5 flex items-center gap-1 text-[13px] text-[#007AFF] font-medium"
-                onClick={() => setIntentExpand(true)}
-                whileTap={{ scale: 0.95 }}
-              >
-                <span>调整</span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#007AFF" strokeWidth="2.5"><path d="m9 18 6-6-6-6"/></svg>
-              </motion.button>
+              <span className="text-[11px] text-[#6E6E73]">在线 · 处理中 {inboxTasks.filter(t => t.type !== "INFO_REPORT").length} 项</span>
             </div>
           </div>
-        </motion.div>
+          {/* Engine Status — dropdown trigger */}
+          <div className="flex-shrink-0 relative">
+            <motion.button className="flex items-center gap-1.5 h-[28px] px-3 rounded-full text-[11px] font-medium text-white" style={{ backgroundColor: engineStates[engineIdx].key === "active" ? "#32D74B" : engineStates[engineIdx].key === "passive" ? "#FF9F0A" : "#8E8E93", boxShadow: `0 1px 6px ${engineStates[engineIdx].key === "active" ? "#32D74B" : engineStates[engineIdx].key === "passive" ? "#FF9F0A" : "#8E8E93"}20` }} whileTap={{ scale: 0.95 }} onClick={() => setEngineMenuOpen(!engineMenuOpen)}>
+              <span>{engineStates[engineIdx].label}</span>
+              <motion.svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" animate={{ rotate: engineMenuOpen ? 180 : 0 }} transition={{ duration: 0.2 }}><path d="m6 9 6 6 6-6"/></motion.svg>
+            </motion.button>
+            <AnimatePresence>
+              {engineMenuOpen && (
+                <>
+                  <motion.div className="fixed inset-0 z-40" onClick={() => setEngineMenuOpen(false)} />
+                  <motion.div className="absolute right-0 top-[34px] z-50 min-w-[140px] rounded-2xl overflow-hidden py-1" style={{ background: "rgba(255,255,255,0.88)", backdropFilter: "blur(40px) saturate(180%)", WebkitBackdropFilter: "blur(40px) saturate(180%)", boxShadow: "0 4px 24px rgba(0,0,0,0.1), inset 0 0 0 0.5px rgba(255,255,255,0.5)" }} initial={{ opacity: 0, scale: 0.9, y: -4 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: -4 }} transition={{ duration: 0.18 }}>
+                    {engineStates.map((s, i) => {
+                      const mutedColor = s.key === "active" ? "#32D74B" : s.key === "passive" ? "#FF9F0A" : "#8E8E93";
+                      return (
+                        <motion.button key={s.key} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-left" whileTap={{ backgroundColor: "rgba(0,0,0,0.04)" }} onClick={() => { setEngineIdx(i); setEngineMenuOpen(false); }}>
+                          <div className="w-[6px] h-[6px] rounded-full" style={{ backgroundColor: mutedColor }} />
+                          <span className={`text-[13px] ${engineIdx === i ? "font-semibold text-[#1D1D1F]" : "text-[#8E8E93]"}`}>{s.label}</span>
+                          {engineIdx === i && <svg className="ml-auto" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1D1D1F" strokeWidth="2.5"><path d="M20 6 9 17l-5-5"/></svg>}
+                        </motion.button>
+                      );
+                    })}
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+
+        {/* Row 2: Stats + Match rate bar (horizontal) */}
+        <div className="px-5 flex items-center gap-3 pb-3">
+          <div className="flex items-baseline gap-0 flex-1">
+            <span className="text-[11px] text-[#8E8E93]">浏览</span>
+            <AnimatedNumber value="1,247" color="text-[#1D1D1F]" />
+            <span className="text-[11px] text-[#8E8E93]">岗位</span>
+            <span className="text-black/[0.06] mx-1.5">|</span>
+            <span className="text-[11px] text-[#8E8E93]">沟通</span>
+            <AnimatedNumber value="24" color="text-[#1D1D1F]" />
+            <span className="text-black/[0.06] mx-1.5">|</span>
+            <span className="text-[11px] text-[#8E8E93]">拦截</span>
+            <AnimatedNumber value="86" color="text-[#1D1D1F]" />
+          </div>
+          {/* Match rate — horizontal bar */}
+          <div className="flex-shrink-0 flex items-center gap-1.5">
+            <span className="text-[10px] text-[#8E8E93]">匹配</span>
+            <div className="w-[48px] h-[3px] rounded-full bg-black/[0.04]">
+              <motion.div className="h-full rounded-full" style={{ background: "linear-gradient(90deg, #32D74B, #30D158)" }} initial={{ width: 0 }} animate={{ width: `${matchRate}%` }} transition={{ duration: 0.8, ease: "easeOut" }} />
+            </div>
+            <motion.span className="text-[10px] font-semibold text-[#1D1D1F]" key={matchRate} initial={{ scale: 1.1 }} animate={{ scale: 1 }} style={{ fontFeatureSettings: "'tnum'", minWidth: "20px" }}>{matchRate}%</motion.span>
+          </div>
+        </div>
+
+        {/* Row 4: Intent — full width, clearly tappable */}
+        <div className="px-5 pb-3">
+          <motion.button className="w-full flex items-center justify-between rounded-2xl px-4 py-3" style={{ backgroundColor: "rgba(0,0,0,0.03)" }} onClick={() => setIntentExpand(true)} whileTap={{ scale: 0.98 }}>
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" strokeWidth="2" className="flex-shrink-0"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.287 1.288L3 12l5.8 1.9a2 2 0 0 1 1.288 1.287L12 21l1.9-5.8a2 2 0 0 1 1.287-1.288L21 12l-5.8-1.9a2 2 0 0 1-1.288-1.287Z" /></svg>
+              <span className="text-[13px] text-[#1D1D1F] truncate">{coreIntent}</span>
+            </div>
+            <div className="flex items-center gap-1 flex-shrink-0 ml-3">
+              <span className="text-[12px] text-[#007AFF]/80 font-medium">调整</span>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#007AFF" strokeWidth="2.5" opacity="0.8"><path d="m9 18 6-6-6-6"/></svg>
+            </div>
+          </motion.button>
+        </div>
+
+        {/* Bottom fade edge */}
+        <div className="h-[1px] bg-gradient-to-r from-transparent via-black/[0.06] to-transparent" />
+      </div>
+
+      {/* ── Scrollable Conversation ── */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="px-5 pt-4 space-y-3 pb-36">
+          {/* Task cards (current pending items) */}
+          <AnimatePresence>
+            {inboxTasks.map((task) => {
+              const tc = typeConfig[task.type];
+              return (
+                <motion.div key={task.id} layout className="flex items-start gap-2.5" initial={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9, x: -30, transition: { duration: 0.35 } }} animate={resolvingId === task.id ? { opacity: [1, 0.4], scale: [1, 0.95], transition: { duration: 0.3 } } : {}}>
+                  {/* Agent avatar */}
+                  <div className="w-7 h-7 rounded-full bg-[#1D1D1F] flex items-center justify-center flex-shrink-0 mt-1" style={{ boxShadow: "0 1px 4px rgba(0,0,0,0.1)" }}>
+                    <span className="text-[9px] font-bold text-white">A.</span>
+                  </div>
+                  {/* Bubble */}
+                  <div className="flex-1 min-w-0">
+                    <div className="rounded-2xl rounded-tl-md overflow-hidden cursor-pointer" style={{ background: "rgba(255,255,255,0.75)", backdropFilter: "blur(20px) saturate(180%)", WebkitBackdropFilter: "blur(20px) saturate(180%)", boxShadow: "0 1px 8px rgba(0,0,0,0.04), inset 0 0 0 0.5px rgba(255,255,255,0.5)" }} onClick={() => task.company && router.push(`/dashboard/chat/${task.id}`)}>
+                      <div className="px-4 py-3">
+                        {/* Badge + Time */}
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-[6px] h-[6px] rounded-full" style={{ backgroundColor: tc.dotColor }} />
+                            <span className="text-[11px] text-[#8E8E93] font-medium">{tc.badge}</span>
+                          </div>
+                          {task.time && <span className="text-[11px] text-[#AEAEB2]">{task.time}</span>}
+                        </div>
+                        {/* Company */}
+                        {task.company && (
+                          <p className="text-[15px] font-semibold text-[#1D1D1F] tracking-tight mb-1">
+                            {task.company}{task.team ? ` · ${task.team}` : ""}{task.salary ? <span className="text-[12px] text-[#8E8E93] font-normal ml-1.5">{task.salary}</span> : null}
+                          </p>
+                        )}
+                        {/* P0 */}
+                        {task.type === "P0_HARD_DECISION" && task.alert && <p className="text-[14px] text-[#1D1D1F] leading-[1.5] mb-3">{task.alert}</p>}
+                        {/* P1 */}
+                        {task.type === "P1_TRADE_OFF" && <div className="mb-3">{task.conflictPoint && <p className="text-[14px] font-medium text-[#1D1D1F] leading-[1.5] mb-1">{task.conflictPoint}</p>}{task.agentCalc && <p className="text-[13px] text-[#8E8E93] leading-[1.6]">{task.agentCalc}</p>}</div>}
+                        {/* P2 */}
+                        {task.type === "P2_KNOWLEDGE_GAP" && <div className="mb-3">{task.hrQuestion && <div className="mb-2"><p className="text-[11px] text-[#AEAEB2] mb-0.5">对方提问</p><p className="text-[14px] text-[#1D1D1F] leading-[1.5]">{task.hrQuestion}</p></div>}{task.agentDraft && <div><p className="text-[11px] text-[#AEAEB2] mb-0.5">我拟的草稿</p><p className="text-[13px] text-[#8E8E93] leading-[1.6] bg-black/[0.03] rounded-xl px-3 py-2">{task.agentDraft}</p></div>}</div>}
+                        {/* INFO */}
+                        {task.type === "INFO_REPORT" && <div className="mb-2">{task.infoTitle && <p className="text-[14px] font-medium text-[#1D1D1F] mb-0.5">{task.infoTitle}</p>}{task.infoBody && <p className="text-[13px] text-[#8E8E93] leading-[1.5]">{task.infoBody}</p>}</div>}
+                        {/* Actions */}
+                        <div className="flex gap-2 mt-1" onClick={e => e.stopPropagation()}>
+                          {task.actions.map((act) => (
+                            <motion.button key={act.label} className={`h-[36px] rounded-xl text-[13px] font-medium px-3 ${act.primary ? "flex-1 bg-[#1D1D1F] text-white" : act.danger ? "text-[#8E8E93]" : "flex-1 bg-black/[0.04] text-[#1D1D1F]"}`} style={act.primary ? { boxShadow: "0 1px 6px rgba(0,0,0,0.1)" } : {}} whileTap={{ scale: 0.97 }} onClick={() => handleResolve(task.id, act.label)}>
+                              {act.label}
+                            </motion.button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+
+          {inboxTasks.length === 0 && chatMsgs.length === 0 && (
+            <div className="flex items-start gap-2.5">
+              <div className="w-7 h-7 rounded-full bg-[#1D1D1F] flex items-center justify-center flex-shrink-0 mt-1"><span className="text-[9px] font-bold text-white">A.</span></div>
+              <div className="rounded-2xl rounded-tl-md px-4 py-3" style={{ background: "rgba(255,255,255,0.75)", backdropFilter: "blur(20px)", boxShadow: "0 1px 6px rgba(0,0,0,0.03), inset 0 0 0 0.5px rgba(255,255,255,0.5)" }}>
+                <p className="text-[14px] text-[#8E8E93] leading-relaxed">全部处理完毕 ✓ 有新进展我会立即通知你。</p>
+              </div>
+            </div>
+          )}
+
+          {chatMsgs.filter(m => m.id < 0).map((msg) => (
+            <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "items-start gap-2.5"}`}>
+              {msg.role === "agent" && (
+                <div className="w-7 h-7 rounded-full bg-[#1D1D1F] flex items-center justify-center flex-shrink-0 mt-1"><span className="text-[9px] font-bold text-white">A.</span></div>
+              )}
+              {msg.role === "agent" ? (
+                <div className="rounded-2xl rounded-tl-md px-4 py-3 max-w-[80%]" style={{ background: "rgba(255,255,255,0.75)", backdropFilter: "blur(20px)", boxShadow: "0 1px 6px rgba(0,0,0,0.03), inset 0 0 0 0.5px rgba(255,255,255,0.5)" }}><p className="text-[14px] text-[#1D1D1F] leading-relaxed">{msg.text}</p></div>
+              ) : (
+                <div className="bg-[#1D1D1F] rounded-2xl rounded-tr-md px-4 py-3 max-w-[78%]" style={{ boxShadow: "0 1px 8px rgba(0,0,0,0.08)" }}><p className="text-[14px] text-white leading-relaxed">{msg.text}</p></div>
+              )}
+            </div>
+          ))}
+
+          {chatMsgs.filter(m => m.id >= 0).map((msg) => (
+            <motion.div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "items-start gap-2.5"}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
+              {msg.role === "agent" && (
+                <div className="w-7 h-7 rounded-full bg-[#1D1D1F] flex items-center justify-center flex-shrink-0 mt-1"><span className="text-[9px] font-bold text-white">A.</span></div>
+              )}
+              {msg.role === "agent" ? (
+                <div className="rounded-2xl rounded-tl-md px-4 py-3 max-w-[80%]" style={{ background: "rgba(255,255,255,0.75)", backdropFilter: "blur(20px)", boxShadow: "0 1px 6px rgba(0,0,0,0.03), inset 0 0 0 0.5px rgba(255,255,255,0.5)" }}><p className="text-[14px] text-[#1D1D1F] leading-relaxed">{msg.text}</p></div>
+              ) : (
+                <div className="bg-[#1D1D1F] rounded-2xl rounded-tr-md px-4 py-3 max-w-[78%]" style={{ boxShadow: "0 1px 8px rgba(0,0,0,0.08)" }}><p className="text-[14px] text-white leading-relaxed">{msg.text}</p></div>
+              )}
+            </motion.div>
+          ))}
+
+          {chatTyping && (
+            <motion.div className="flex items-start gap-2.5" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+              <div className="w-7 h-7 rounded-full bg-[#1D1D1F] flex items-center justify-center flex-shrink-0 mt-1"><span className="text-[9px] font-bold text-white">A.</span></div>
+              <div className="rounded-2xl rounded-tl-md px-4 py-3" style={{ background: "rgba(255,255,255,0.75)", backdropFilter: "blur(20px)", boxShadow: "0 1px 6px rgba(0,0,0,0.03)" }}>
+                <div className="flex gap-1 items-center h-[20px]">
+                  <motion.div className="w-1.5 h-1.5 bg-[#AEAEB2] rounded-full" animate={{ y: [0, -3, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0 }} />
+                  <motion.div className="w-1.5 h-1.5 bg-[#AEAEB2] rounded-full" animate={{ y: [0, -3, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.15 }} />
+                  <motion.div className="w-1.5 h-1.5 bg-[#AEAEB2] rounded-full" animate={{ y: [0, -3, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0.3 }} />
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          <div ref={chatEndRef} />
+        </div>
+      </div>
+
+      {/* ── Fixed Input Bar ── */}
+      <div className="fixed bottom-[68px] left-1/2 -translate-x-1/2 w-[430px] px-5 pb-3 pt-4 z-30" style={{ background: "linear-gradient(to top, #F5F5F7 65%, transparent)" }}>
+        <div className="flex items-end gap-2.5">
+          {/* Voice toggle button */}
+          <motion.button className="flex-shrink-0 w-[38px] h-[38px] rounded-full flex items-center justify-center" style={{ backgroundColor: voiceMode ? "#1D1D1F" : "rgba(0,0,0,0.04)" }} whileTap={{ scale: 0.9 }} onClick={() => setVoiceMode(!voiceMode)}>
+            {voiceMode ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8" strokeLinecap="round"><path d="M4 7h3l4-4v18l-4-4H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1Z"/><path d="M15 9a3 3 0 0 1 0 6"/></svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" strokeWidth="1.8" strokeLinecap="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+            )}
+          </motion.button>
+
+          {/* Input area */}
+          <AnimatePresence mode="wait">
+            {voiceMode ? (
+              <motion.button key="voice" className="flex-1 h-[42px] rounded-2xl flex items-center justify-center text-[14px] font-medium text-[#8E8E93] active:bg-black/[0.06] transition-colors" style={{ background: "rgba(255,255,255,0.75)", backdropFilter: "blur(30px) saturate(180%)", WebkitBackdropFilter: "blur(30px) saturate(180%)", boxShadow: "0 1px 12px rgba(0,0,0,0.05), inset 0 0 0 0.5px rgba(255,255,255,0.6)" }} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.15 }}>
+                按住说话
+              </motion.button>
+            ) : (
+              <motion.div key="text" className="flex-1 flex items-end rounded-2xl px-4 py-2.5" style={{ background: "rgba(255,255,255,0.75)", backdropFilter: "blur(30px) saturate(180%)", WebkitBackdropFilter: "blur(30px) saturate(180%)", boxShadow: "0 1px 12px rgba(0,0,0,0.05), inset 0 0 0 0.5px rgba(255,255,255,0.6)", minHeight: "42px" }} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} transition={{ duration: 0.15 }}>
+                <input type="text" placeholder="给经纪人说点什么..." className="flex-1 text-[15px] text-[#1D1D1F] placeholder-[#AEAEB2] bg-transparent outline-none leading-[1.4]" value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === "Enter" && chatInput.trim() && handleSendChat()} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Send button — only visible when has text */}
+          <AnimatePresence>
+            {chatInput.trim() && !voiceMode && (
+              <motion.button className="flex-shrink-0 w-[38px] h-[38px] rounded-full bg-[#1D1D1F] flex items-center justify-center" style={{ boxShadow: "0 2px 10px rgba(0,0,0,0.12)" }} initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.5 }} transition={{ type: "spring", stiffness: 400, damping: 20 }} whileTap={{ scale: 0.85 }} onClick={handleSendChat}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><path d="M12 19V5" /><path d="m5 12 7-7 7 7" /></svg>
+              </motion.button>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
       {/* 意图参数 Bottom Sheet */}
@@ -558,427 +813,321 @@ function OverviewPage({ onSwitchToChat, inboxTasks, onDismissTask }: { onSwitchT
           </>
         )}
       </AnimatePresence>
-
-      {/* 模块二：工作简报 */}
-      <div className="px-5 pt-3">
-        <div className="bg-white/70 backdrop-blur-xl rounded-[16px] px-5 py-4" style={{ boxShadow: "0 1px 10px rgba(0,0,0,0.03), 0 0 0 0.5px rgba(0,0,0,0.03)" }}>
-          <p className="text-[13px] text-[#86868B] mb-2">你的经纪人替你</p>
-          <div className="flex items-baseline gap-0">
-            <span className="text-[13px] text-[#86868B]">浏览了</span>
-            <AnimatedNumber value="1,247" color="text-[#1D1D1F]" />
-            <span className="text-[13px] text-[#86868B] ml-0.5">个岗位</span>
-            <span className="text-[#E5E5EA] mx-2">|</span>
-            <span className="text-[13px] text-[#86868B]">沟通</span>
-            <AnimatedNumber value="24" color="text-[#1D1D1F]" />
-            <span className="text-[#E5E5EA] mx-2">|</span>
-            <span className="text-[13px] text-[#86868B]">拦截</span>
-            <AnimatedNumber value="86" color="text-[#1D1D1F]" />
-          </div>
-        </div>
-      </div>
-
-      {/* 模块三：收件箱 Action Center */}
-      <div className="px-5 pt-5 pb-2">
-        <div className="flex items-center gap-2 mb-3">
-          <p className="text-[11px] font-medium text-[#86868B] uppercase tracking-wider">待处理</p>
-          {actionableTasks.length > 0 && (
-            <span className="w-5 h-5 bg-[#FF3B30] rounded-full text-[10px] text-white font-bold flex items-center justify-center">{actionableTasks.length}</span>
-          )}
-        </div>
-        <div className="space-y-3">
-          <AnimatePresence>
-            {actionableTasks.map((task) => {
-              const tc = typeConfig[task.type];
-              return (
-              <motion.div
-                key={task.id}
-                layout
-                className="bg-white rounded-2xl overflow-hidden relative cursor-pointer"
-                style={{ boxShadow: resolvingId === task.id ? "0 0 30px rgba(0,200,255,0.4), 0 0 60px rgba(0,200,255,0.2)" : "0 2px 16px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.04)" }}
-                onClick={() => task.company && router.push(`/dashboard/chat/${task.id}`)}
-                initial={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.3, y: 200, x: 50, transition: { duration: 0.6, ease: [0.32, 0, 0.67, 0] } }}
-                animate={resolvingId === task.id ? {
-                  scale: [1, 1.02, 0.3],
-                  opacity: [1, 1, 0],
-                  y: [0, -8, 200],
-                  x: [0, 0, 50],
-                  transition: { duration: 0.7, ease: [0.32, 0, 0.67, 0] }
-                } : { scale: 1, opacity: 1 }}
-              >
-                {resolvingId === task.id && (
-                  <motion.div
-                    className="absolute inset-0 z-10 rounded-2xl"
-                    style={{ background: "linear-gradient(135deg, rgba(0,200,255,0.3), rgba(0,122,255,0.2), rgba(0,200,255,0.1))" }}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: [0, 1, 0.5] }}
-                    transition={{ duration: 0.5 }}
-                  />
-                )}
-                <div className="px-5 py-4">
-                  {/* 头部 */}
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-[6px] h-[6px] rounded-full" style={{ backgroundColor: tc.dotColor }} />
-                      <span className="text-[12px] text-[#86868B] font-medium">{tc.badge}</span>
-                    </div>
-                    {task.time && <span className="text-[11px] text-[#C7C7CC]">{task.time}</span>}
-                  </div>
-
-                  {/* 公司信息 */}
-                  {task.company && (
-                    <div className="mb-3">
-                      <p className="text-[16px] font-semibold text-[#1D1D1F] tracking-tight">{task.company}</p>
-                      {task.team && <p className="text-[13px] text-[#86868B] mt-0.5">{task.team} · {task.salary}</p>}
-                    </div>
-                  )}
-
-                  {/* P0: 警报 */}
-                  {task.type === "P0_HARD_DECISION" && task.alert && (
-                    <p className="text-[14px] text-[#1D1D1F] leading-[1.5] mb-4">{task.alert}</p>
-                  )}
-
-                  {/* P1: 冲突 + 分析 */}
-                  {task.type === "P1_TRADE_OFF" && (
-                    <div className="mb-4">
-                      {task.conflictPoint && (
-                        <p className="text-[14px] font-medium text-[#1D1D1F] leading-[1.5] mb-1.5">{task.conflictPoint}</p>
-                      )}
-                      {task.agentCalc && (
-                        <p className="text-[13px] text-[#86868B] leading-[1.6]">{task.agentCalc}</p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* P2: 提问 + 草稿 */}
-                  {task.type === "P2_KNOWLEDGE_GAP" && (
-                    <div className="mb-4">
-                      {task.hrQuestion && (
-                        <div className="mb-2.5">
-                          <p className="text-[11px] text-[#C7C7CC] mb-1">对方提问</p>
-                          <p className="text-[14px] text-[#1D1D1F] leading-[1.5]">{task.hrQuestion}</p>
-                        </div>
-                      )}
-                      {task.agentDraft && (
-                        <div>
-                          <p className="text-[11px] text-[#C7C7CC] mb-1">Agent 拟定草稿</p>
-                          <p className="text-[13px] text-[#86868B] leading-[1.6] bg-[#F5F5F7] rounded-[10px] px-3.5 py-2.5">{task.agentDraft}</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* 操作按钮 */}
-                  <div className="flex gap-2" onClick={e => e.stopPropagation()}>
-                    {task.actions.map((act) => (
-                      <motion.button
-                        key={act.label}
-                        className={`h-[40px] rounded-[10px] text-[13px] font-medium px-4 ${act.primary ? "flex-1 bg-[#1D1D1F] text-white" : act.danger ? "text-[#86868B]" : "flex-1 bg-[#F5F5F7] text-[#1D1D1F]"}`}
-                        whileTap={{ scale: 0.97 }}
-                        onClick={() => act.primary && handleResolve(task.id)}
-                      >
-                        {act.label}
-                      </motion.button>
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
-              );
-            })}
-          </AnimatePresence>
-
-          {/* INFO 战报（轻量级，可整体清除） */}
-          {infoTasks.map((task) => (
-            <motion.div
-              key={task.id}
-              layout
-              className="bg-white/50 backdrop-blur-xl rounded-[14px] px-4 py-3 flex items-center justify-between"
-              style={{ boxShadow: "0 1px 8px rgba(0,0,0,0.03)" }}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, x: 100 }}
-            >
-              <div className="flex-1">
-                <p className="text-[13px] font-medium text-[#1D1D1F]">{task.infoTitle}</p>
-                <p className="text-[12px] text-[#86868B] mt-0.5">{task.infoBody}</p>
-              </div>
-              <motion.button
-                className="text-[12px] text-[#007AFF] font-medium ml-3 flex-shrink-0"
-                whileTap={{ scale: 0.95 }}
-                onClick={() => onDismissTask(task.id)}
-              >
-                清除
-              </motion.button>
-            </motion.div>
-          ))}
-
-          {actionableTasks.length === 0 && infoTasks.length === 0 && (
-            <div className="bg-white/70 backdrop-blur-xl rounded-[18px] p-6 flex flex-col items-center" style={{ boxShadow: "0 2px 20px rgba(0,0,0,0.04)" }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#34C759" strokeWidth="2" className="mb-2"><path d="M20 6 9 17l-5-5"/></svg>
-              <p className="text-[14px] text-[#86868B]">全部处理完毕，暂无待办</p>
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 }
 
-/* ============ Tab 1: Opportunities (Pipeline) ============ */
-function OpportunitiesFeed({ opps, inboxTasks, onDismissTask }: { opps: Opportunity[]; inboxTasks: InboxTask[]; onDismissTask: (id: number) => void }) {
+/* ============ Tab 1: Recommended Jobs ============ */
+function RecommendedJobsFeed({ jobs: initialJobs }: { jobs: RecommendedJob[] }) {
   const router = useRouter();
-  type TabKey = "ALL" | "KEY_PROGRESS" | "NEGOTIATION" | "ENDED";
-  const [activeTab, setActiveTab] = useState<TabKey>("ALL");
-  const [sortByMatch, setSortByMatch] = useState(false);
+  type FilterKey = "ALL" | "HIGH" | "INTERESTED";
+  const [filter, setFilter] = useState<FilterKey>("ALL");
+  const [jobs, setJobs] = useState(initialJobs);
+  const [selectedJob, setSelectedJob] = useState<RecommendedJob | null>(null);
+  const [chatMode, setChatMode] = useState(false);
+  const [chatInput, setChatInput] = useState("");
+  const [userMsgs, setUserMsgs] = useState<{ id: number; role: "user" | "agent" | "hr"; text: string }[]>([]);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
-  const keyProgress = opps.filter(o => o.state === "SUSPENDED" || o.state === "HUMAN_TAKEOVER");
-  const negotiation = opps.filter(o => o.state === "NEGOTIATING");
-  const ended = opps.filter(o => o.state === "DEAD_END");
-
-  const tabs: { key: TabKey; label: string; count: number; color?: string }[] = [
-    { key: "ALL", label: "总览", count: opps.length },
-    { key: "KEY_PROGRESS", label: "关键推进", count: keyProgress.length, color: "#FF9500" },
-    { key: "NEGOTIATION", label: "沟通谈判", count: negotiation.length, color: "#34C759" },
-    { key: "ENDED", label: "拦截结束", count: ended.length, color: "#86868B" },
+  const filtered = filter === "ALL" ? jobs : filter === "HIGH" ? jobs.filter(j => j.aiScore >= 90) : jobs.filter(j => j.status === "interested" || j.status === "chatting");
+  const filters: { key: FilterKey; label: string; count: number }[] = [
+    { key: "ALL", label: "全部", count: jobs.length },
+    { key: "HIGH", label: "高匹配", count: jobs.filter(j => j.aiScore >= 90).length },
+    { key: "INTERESTED", label: "已关注", count: jobs.filter(j => j.status === "interested" || j.status === "chatting").length },
   ];
 
-  const base = activeTab === "ALL" ? opps
-    : activeTab === "KEY_PROGRESS" ? keyProgress
-    : activeTab === "NEGOTIATION" ? negotiation
-    : ended;
-  const filtered = sortByMatch ? [...base].sort((a, b) => b.match - a.match) : base;
+  const handleInterested = (id: number) => {
+    setJobs(prev => prev.map(j => j.id === id ? { ...j, status: "interested" as JobStatus } : j));
+  };
+  const handlePass = (id: number) => {
+    setJobs(prev => prev.map(j => j.id === id ? { ...j, status: "passed" as JobStatus } : j));
+  };
+  const handleStartChat = () => {
+    if (selectedJob) {
+      setJobs(prev => prev.map(j => j.id === selectedJob.id ? { ...j, status: "chatting" as JobStatus } : j));
+      setChatMode(true);
+    }
+  };
+  const handleSendChat = (text?: string) => {
+    const msg = text || chatInput;
+    if (!msg.trim()) return;
+    setUserMsgs(prev => [...prev, { id: Date.now(), role: "user", text: msg }]);
+    setChatInput("");
+    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+  };
 
-  return (
-    <div className="min-h-screen bg-[#FAFAFA] pb-24">
-      <div className="sticky top-0 z-30 backdrop-blur-xl bg-white/80 border-b border-gray-100 px-5 pt-14 pb-3">
-        <h1 className="text-[22px] font-semibold text-[#1D1D1F] mb-3">机会</h1>
+  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [userMsgs]);
 
-        {/* 嗅探统计 */}
-        <div className="flex items-center gap-2 mb-3">
-          <div className="relative">
-            <div className="w-[5px] h-[5px] rounded-full bg-[#007AFF]" />
-            <div className="absolute inset-0 w-[5px] h-[5px] rounded-full bg-[#007AFF] animate-ping opacity-40" />
+  // Chat takeover view
+  if (chatMode && selectedJob) {
+    return (
+      <div className="flex flex-col h-screen bg-[#F5F5F7]">
+        <div className="sticky top-0 z-30 flex-shrink-0" style={{ background: "rgba(255,255,255,0.88)", backdropFilter: "blur(40px) saturate(180%)", WebkitBackdropFilter: "blur(40px) saturate(180%)" }}>
+          <div className="h-14" />
+          <div className="px-5 pb-3 flex items-center gap-3">
+            <motion.button className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.04)" }} whileTap={{ scale: 0.9 }} onClick={() => setChatMode(false)}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1D1D1F" strokeWidth="2"><path d="m15 18-6-6 6-6"/></svg>
+            </motion.button>
+            <div className="flex-1 min-w-0">
+              <p className="text-[15px] font-semibold text-[#1D1D1F] truncate">{selectedJob.company} · {selectedJob.team}</p>
+              <p className="text-[11px] text-[#8E8E93]">Agent 沟通记录 · 你可以接管对话</p>
+            </div>
           </div>
-          <span className="text-[12px] text-[#86868B]">正在与 <span className="font-medium text-[#1D1D1F]">{scoutingCount}</span> 位 HR 探索中</span>
+          <div className="h-[1px] bg-gradient-to-r from-transparent via-black/[0.06] to-transparent" />
+        </div>
+        <div className="flex-1 overflow-y-auto px-5 pt-4 pb-44 space-y-3">
+          {selectedJob.chatHistory.map((msg, i) => (
+            <div key={i} className={`flex ${msg.role === "hr" ? "justify-start" : "items-start gap-2.5"}`}>
+              {msg.role === "agent" && (
+                <div className="w-7 h-7 rounded-full bg-[#1D1D1F] flex items-center justify-center flex-shrink-0 mt-1"><span className="text-[9px] font-bold text-white">A.</span></div>
+              )}
+              {msg.role === "hr" ? (
+                <div className="flex items-start gap-2.5">
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-1 text-[10px] font-bold text-white" style={{ backgroundColor: "#8E8E93" }}>HR</div>
+                  <div className="rounded-2xl rounded-tl-md px-4 py-3 max-w-[78%]" style={{ background: "rgba(255,255,255,0.75)", backdropFilter: "blur(20px)", boxShadow: "0 1px 6px rgba(0,0,0,0.03), inset 0 0 0 0.5px rgba(255,255,255,0.5)" }}>
+                    <p className="text-[14px] text-[#1D1D1F] leading-relaxed">{msg.text}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-2xl rounded-tl-md px-4 py-3 max-w-[78%]" style={{ background: "rgba(255,255,255,0.75)", backdropFilter: "blur(20px)", boxShadow: "0 1px 6px rgba(0,0,0,0.03), inset 0 0 0 0.5px rgba(255,255,255,0.5)" }}>
+                  <p className="text-[10px] text-[#8E8E93] mb-1">你的经纪人</p>
+                  <p className="text-[14px] text-[#1D1D1F] leading-relaxed">{msg.text}</p>
+                </div>
+              )}
+            </div>
+          ))}
+          {/* Divider */}
+          {userMsgs.length === 0 && (
+            <div className="flex items-center gap-3 py-2">
+              <div className="flex-1 h-[1px] bg-black/[0.06]" />
+              <span className="text-[11px] text-[#AEAEB2] flex-shrink-0">你接管对话</span>
+              <div className="flex-1 h-[1px] bg-black/[0.06]" />
+            </div>
+          )}
+          {userMsgs.map(msg => (
+            <motion.div key={msg.id} className="flex justify-end" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
+              <div className="bg-[#1D1D1F] rounded-2xl rounded-tr-md px-4 py-3 max-w-[78%]" style={{ boxShadow: "0 1px 8px rgba(0,0,0,0.08)" }}>
+                <p className="text-[14px] text-white leading-relaxed">{msg.text}</p>
+              </div>
+            </motion.div>
+          ))}
+          <div ref={chatEndRef} />
+        </div>
+        {/* Suggested messages */}
+        <div className="fixed bottom-[68px] left-1/2 -translate-x-1/2 w-[430px] z-30" style={{ background: "linear-gradient(to top, #F5F5F7 70%, transparent)" }}>
+          <div className="px-5 pb-2 pt-2">
+            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+              {selectedJob.suggestedMessages.map((msg, i) => (
+                <motion.button key={i} className="flex-shrink-0 px-3.5 py-2 rounded-2xl text-[12px] text-[#007AFF]/80 font-medium whitespace-nowrap" style={{ backgroundColor: "rgba(0,122,255,0.06)" }} whileTap={{ scale: 0.95 }} onClick={() => handleSendChat(msg)}>
+                  {msg.length > 20 ? msg.slice(0, 20) + "..." : msg}
+                </motion.button>
+              ))}
+            </div>
+          </div>
+          <div className="px-5 pb-3">
+            <div className="flex items-end gap-2.5">
+              <div className="flex-1 flex items-end rounded-2xl px-4 py-2.5" style={{ background: "rgba(255,255,255,0.75)", backdropFilter: "blur(30px) saturate(180%)", boxShadow: "0 1px 12px rgba(0,0,0,0.05), inset 0 0 0 0.5px rgba(255,255,255,0.6)", minHeight: "42px" }}>
+                <input type="text" placeholder="发送消息给企业..." className="flex-1 text-[15px] text-[#1D1D1F] placeholder-[#AEAEB2] bg-transparent outline-none leading-[1.4]" value={chatInput} onChange={e => setChatInput(e.target.value)} onKeyDown={e => e.key === "Enter" && chatInput.trim() && handleSendChat()} />
+              </div>
+              <AnimatePresence>
+                {chatInput.trim() && (
+                  <motion.button className="flex-shrink-0 w-[38px] h-[38px] rounded-full bg-[#1D1D1F] flex items-center justify-center" style={{ boxShadow: "0 2px 10px rgba(0,0,0,0.12)" }} initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.5 }} transition={{ type: "spring", stiffness: 400, damping: 20 }} whileTap={{ scale: 0.85 }} onClick={() => handleSendChat()}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><path d="M12 19V5" /><path d="m5 12 7-7 7 7" /></svg>
+                  </motion.button>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Job detail sheet
+  if (selectedJob && !chatMode) {
+    return (
+      <div className="flex flex-col h-screen bg-[#F5F5F7]">
+        <div className="sticky top-0 z-30 flex-shrink-0" style={{ background: "rgba(255,255,255,0.88)", backdropFilter: "blur(40px) saturate(180%)", WebkitBackdropFilter: "blur(40px) saturate(180%)" }}>
+          <div className="h-14" />
+          <div className="px-5 pb-3 flex items-center gap-3">
+            <motion.button className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: "rgba(0,0,0,0.04)" }} whileTap={{ scale: 0.9 }} onClick={() => setSelectedJob(null)}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1D1D1F" strokeWidth="2"><path d="m15 18-6-6 6-6"/></svg>
+            </motion.button>
+            <div className="flex-1 min-w-0">
+              <p className="text-[15px] font-semibold text-[#1D1D1F] truncate">{selectedJob.company}</p>
+              <p className="text-[11px] text-[#8E8E93]">{selectedJob.team} · {selectedJob.location}</p>
+            </div>
+            <div className="flex-shrink-0 w-[40px] h-[40px] relative">
+              <svg width="40" height="40" viewBox="0 0 40 40" className="transform -rotate-90">
+                <circle cx="20" cy="20" r="16" fill="none" stroke="rgba(0,0,0,0.04)" strokeWidth="2.5" />
+                <circle cx="20" cy="20" r="16" fill="none" stroke={selectedJob.aiScore >= 90 ? "#32D74B" : selectedJob.aiScore >= 80 ? "#FF9F0A" : "#8E8E93"} strokeWidth="2.5" strokeLinecap="round" strokeDasharray={`${(selectedJob.aiScore / 100) * 2 * Math.PI * 16} ${2 * Math.PI * 16}`} />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center"><span className="text-[11px] font-bold text-[#1D1D1F]" style={{ fontFeatureSettings: "'tnum'" }}>{selectedJob.aiScore}</span></div>
+            </div>
+          </div>
+          <div className="h-[1px] bg-gradient-to-r from-transparent via-black/[0.06] to-transparent" />
         </div>
 
-        {/* 管道标签 */}
-        <div className="flex items-center gap-1.5">
-          {tabs.map((tab) => {
-            const isActive = activeTab === tab.key;
-            return (
-              <motion.button
-                key={tab.key}
-                className={`flex-1 flex items-center justify-center gap-1 h-[32px] rounded-full text-[12px] font-medium transition-colors ${isActive ? "bg-[#1D1D1F] text-white" : "bg-[#F5F5F7] text-[#86868B]"}`}
-                whileTap={{ scale: 0.96 }}
-                onClick={() => setActiveTab(tab.key)}
-              >
-                {tab.color && !isActive && <div className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: tab.color }} />}
-                <span>{tab.label}</span>
-                <span className={`text-[10px] ${isActive ? "text-white/50" : "text-[#C7C7CC]"}`}>{tab.count}</span>
-              </motion.button>
-            );
-          })}
-          <motion.button
-            className={`w-[32px] h-[32px] flex items-center justify-center rounded-full flex-shrink-0 transition-colors ${sortByMatch ? "bg-[#1D1D1F] text-white" : "bg-[#F5F5F7] text-[#86868B]"}`}
-            whileTap={{ scale: 0.96 }}
-            onClick={() => setSortByMatch(!sortByMatch)}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M3 6h18M6 12h12M9 18h6" /></svg>
+        <div className="flex-1 overflow-y-auto px-5 pt-5 pb-32 space-y-4">
+          {/* Salary + meta */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[20px] font-bold text-[#1D1D1F]">{selectedJob.salary}</span>
+            <span className="text-[12px] text-[#8E8E93] px-2 py-0.5 rounded-full" style={{ backgroundColor: "rgba(0,0,0,0.03)" }}>{selectedJob.location}</span>
+            <span className="text-[12px] text-[#8E8E93] px-2 py-0.5 rounded-full" style={{ backgroundColor: "rgba(0,0,0,0.03)" }}>招 {selectedJob.headcount} 人</span>
+          </div>
+
+          {/* AI Analysis */}
+          <div className="rounded-2xl px-4 py-4" style={{ background: "rgba(255,255,255,0.75)", backdropFilter: "blur(20px)", boxShadow: "0 1px 8px rgba(0,0,0,0.04), inset 0 0 0 0.5px rgba(255,255,255,0.5)" }}>
+            <div className="flex items-center gap-2 mb-2.5">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8E8E93" strokeWidth="2"><path d="m12 3-1.9 5.8a2 2 0 0 1-1.287 1.288L3 12l5.8 1.9a2 2 0 0 1 1.288 1.287L12 21l1.9-5.8a2 2 0 0 1 1.287-1.288L21 12l-5.8-1.9a2 2 0 0 1-1.288-1.287Z" /></svg>
+              <span className="text-[13px] font-semibold text-[#1D1D1F]">AI 推荐分析</span>
+            </div>
+            <p className="text-[14px] text-[#1D1D1F]/80 leading-[1.7]">{selectedJob.aiAnalysis}</p>
+          </div>
+
+          {/* JD Summary */}
+          <div className="rounded-2xl px-4 py-4" style={{ background: "rgba(255,255,255,0.75)", backdropFilter: "blur(20px)", boxShadow: "0 1px 8px rgba(0,0,0,0.04), inset 0 0 0 0.5px rgba(255,255,255,0.5)" }}>
+            <p className="text-[13px] font-semibold text-[#1D1D1F] mb-2">岗位描述</p>
+            <p className="text-[14px] text-[#1D1D1F]/70 leading-[1.6] mb-3">{selectedJob.jdSummary}</p>
+            <p className="text-[13px] font-semibold text-[#1D1D1F] mb-2">岗位要求</p>
+            <div className="space-y-1.5">
+              {selectedJob.requirements.map((r, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <div className="w-[5px] h-[5px] rounded-full bg-[#8E8E93] mt-[7px] flex-shrink-0" />
+                  <p className="text-[13px] text-[#1D1D1F]/70 leading-[1.5]">{r}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Agent chat preview */}
+          <div className="rounded-2xl px-4 py-4" style={{ background: "rgba(255,255,255,0.75)", backdropFilter: "blur(20px)", boxShadow: "0 1px 8px rgba(0,0,0,0.04), inset 0 0 0 0.5px rgba(255,255,255,0.5)" }}>
+            <p className="text-[13px] font-semibold text-[#1D1D1F] mb-3">Agent 已沟通 {selectedJob.chatHistory.length} 轮</p>
+            <div className="space-y-2.5">
+              {selectedJob.chatHistory.slice(-2).map((msg, i) => (
+                <div key={i} className="flex items-start gap-2">
+                  <span className="text-[11px] text-[#8E8E93] font-medium flex-shrink-0 w-8 pt-0.5">{msg.role === "agent" ? "Agent" : "HR"}</span>
+                  <p className="text-[13px] text-[#1D1D1F]/70 leading-[1.5]">{msg.text}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom action */}
+        <div className="fixed bottom-[68px] left-1/2 -translate-x-1/2 w-[430px] px-5 pb-3 pt-3 z-30" style={{ background: "linear-gradient(to top, #F5F5F7 70%, transparent)" }}>
+          <motion.button className="w-full h-[48px] rounded-2xl bg-[#1D1D1F] text-white text-[15px] font-semibold flex items-center justify-center gap-2" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.12)" }} whileTap={{ scale: 0.97 }} onClick={handleStartChat}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            开始聊天
           </motion.button>
         </div>
       </div>
-      <div className="px-5 pt-4 space-y-3">
-        <AnimatePresence mode="wait">
-          <motion.div key={activeTab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: 0.2 }}>
-            {filtered.length === 0 && (
-              <div className="flex flex-col items-center py-16">
-                <p className="text-[14px] text-[#C7C7CC]">暂无相关机会</p>
+    );
+  }
+
+  // Job list
+  return (
+    <div className="flex flex-col h-screen bg-[#F5F5F7]">
+      <div className="sticky top-0 z-30 flex-shrink-0" style={{ background: "rgba(255,255,255,0.88)", backdropFilter: "blur(40px) saturate(180%)", WebkitBackdropFilter: "blur(40px) saturate(180%)" }}>
+        <div className="h-14" />
+        <div className="px-5 pb-3">
+          <h1 className="text-[22px] font-semibold text-[#1D1D1F] tracking-tight mb-3">推荐机会</h1>
+          <div className="flex items-center gap-1.5">
+            {filters.map(f => (
+              <motion.button key={f.key} className={`flex items-center justify-center gap-1.5 h-[32px] px-4 rounded-full text-[12px] font-medium transition-all ${filter === f.key ? "bg-[#1D1D1F] text-white" : "text-[#8E8E93]"}`} style={filter !== f.key ? { backgroundColor: "rgba(0,0,0,0.03)" } : {}} whileTap={{ scale: 0.96 }} onClick={() => setFilter(f.key)}>
+                <span>{f.label}</span>
+                <span className={`text-[10px] ${filter === f.key ? "text-white/50" : "text-[#AEAEB2]"}`}>{f.count}</span>
+              </motion.button>
+            ))}
+          </div>
+        </div>
+        <div className="h-[1px] bg-gradient-to-r from-transparent via-black/[0.06] to-transparent" />
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-5 pt-4 pb-24 space-y-3">
+        {filtered.filter(j => j.status !== "passed").map(job => (
+          <motion.div key={job.id} className="rounded-2xl overflow-hidden cursor-pointer" style={{ background: "rgba(255,255,255,0.75)", backdropFilter: "blur(20px) saturate(180%)", boxShadow: "0 1px 8px rgba(0,0,0,0.04), inset 0 0 0 0.5px rgba(255,255,255,0.5)" }} layout whileTap={{ scale: 0.98 }} onClick={() => setSelectedJob(job)}>
+            <div className="px-4 py-4">
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[16px] font-semibold text-[#1D1D1F] tracking-tight">{job.company}</p>
+                  <p className="text-[12px] text-[#8E8E93] mt-0.5">{job.team} · {job.salary} · {job.location}</p>
+                </div>
+                <div className={`flex-shrink-0 ml-3 px-2.5 py-1 rounded-full text-[12px] font-bold ${job.aiScore >= 90 ? "text-[#32D74B] bg-[#32D74B]/[0.08]" : job.aiScore >= 80 ? "text-[#FF9F0A] bg-[#FF9F0A]/[0.08]" : "text-[#8E8E93] bg-black/[0.04]"}`}>
+                  {job.aiScore}
+                </div>
               </div>
-            )}
-
-            {filtered.map((opp) => {
-              /* ── NEGOTIATING ── */
-              if (opp.state === "NEGOTIATING") return (
-                <motion.div key={opp.id} className="bg-white rounded-2xl overflow-hidden mb-3 cursor-pointer" style={{ boxShadow: "0 2px 16px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.04)" }} layout whileTap={{ scale: 0.98 }} onClick={() => router.push(`/dashboard/chat/${opp.id}`)}>
-                  <div className="px-5 py-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <p className="text-[16px] font-semibold text-[#1D1D1F] tracking-tight">{opp.company}</p>
-                      <div className="flex items-center gap-3">
-                        {opp.match >= 90 ? (
-                          <span className="text-[11px] font-semibold text-[#FF9500] bg-[#FF9500]/10 px-2 py-0.5 rounded-full">TOP {opp.match}%</span>
-                        ) : (
-                          <span className="text-[12px] text-[#86868B] font-medium">{opp.match}%</span>
-                        )}
-                        <div className="flex items-center gap-1.5">
-                          <div className="relative">
-                            <div className="w-[6px] h-[6px] rounded-full bg-[#34C759]" />
-                            <div className="absolute inset-0 w-[6px] h-[6px] rounded-full bg-[#34C759] animate-ping opacity-60" />
-                          </div>
-                          <span className="text-[12px] text-[#34C759] font-medium">沟通中</span>
-                        </div>
-                      </div>
-                    </div>
-                    <p className="text-[13px] text-[#86868B] mb-3">{opp.team} · {opp.salary}</p>
-                    {opp.progress && <p className="text-[14px] text-[#1D1D1F] leading-[1.5] mb-1">{opp.progress}</p>}
-                    {opp.lastUpdate && <p className="text-[12px] text-[#C7C7CC]">{opp.lastUpdate}</p>}
-                  </div>
-                </motion.div>
-              );
-
-              /* ── SUSPENDED ── */
-              if (opp.state === "SUSPENDED") {
-                const linkedTask = inboxTasks.find(t => t.id === opp.linkedTaskId);
-                return (
-                  <motion.div key={opp.id} className="bg-white rounded-2xl overflow-hidden mb-3 cursor-pointer" style={{ boxShadow: "0 2px 16px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.04)" }} layout whileTap={{ scale: 0.98 }} onClick={() => router.push(`/dashboard/chat/${opp.id === 201 ? 2 : opp.id === 202 ? 3 : opp.id}`)}>
-                    <div className="px-5 py-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <p className="text-[16px] font-semibold text-[#1D1D1F] tracking-tight">{opp.company}</p>
-                        <div className="flex items-center gap-3">
-                          {opp.match >= 90 ? (
-                            <span className="text-[11px] font-semibold text-[#FF9500] bg-[#FF9500]/10 px-2 py-0.5 rounded-full">TOP {opp.match}%</span>
-                          ) : (
-                            <span className="text-[12px] text-[#86868B] font-medium">{opp.match}%</span>
-                          )}
-                          <div className="flex items-center gap-1.5">
-                            <div className="w-[6px] h-[6px] rounded-full bg-[#FF9500]" />
-                            <span className="text-[12px] text-[#FF9500] font-medium">等待指示</span>
-                          </div>
-                        </div>
-                      </div>
-                      <p className="text-[13px] text-[#86868B] mb-2">{opp.team} · {opp.salary}</p>
-                      <p className="text-[13px] text-[#86868B] mb-4">{opp.suspendReason}</p>
-                      {linkedTask && (
-                        <div className="flex gap-2" onClick={e => e.stopPropagation()}>
-                          {linkedTask.actions.map((act) => (
-                            <motion.button
-                              key={act.label}
-                              className={`h-[40px] rounded-[10px] text-[13px] font-medium px-4 ${act.primary ? "flex-1 bg-[#1D1D1F] text-white" : act.danger ? "text-[#86868B]" : "flex-1 bg-[#F5F5F7] text-[#1D1D1F]"}`}
-                              whileTap={{ scale: 0.97 }}
-                              onClick={() => act.primary && onDismissTask(linkedTask.id)}
-                            >
-                              {act.label}
-                            </motion.button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
-                );
-              }
-
-              /* ── HUMAN_TAKEOVER ── */
-              if (opp.state === "HUMAN_TAKEOVER") return (
-                <motion.div key={opp.id} className="bg-white rounded-2xl overflow-hidden mb-3 cursor-pointer" style={{ boxShadow: "0 2px 16px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.04)" }} layout whileTap={{ scale: 0.98 }} onClick={() => router.push(`/dashboard/chat/${opp.id === 301 ? 1 : opp.id}`)}>
-                  <div className="px-5 py-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <p className="text-[16px] font-semibold text-[#1D1D1F] tracking-tight">{opp.company}</p>
-                      <div className="flex items-center gap-3">
-                        {opp.match >= 90 ? (
-                          <span className="text-[11px] font-semibold text-[#FF9500] bg-[#FF9500]/10 px-2 py-0.5 rounded-full">TOP {opp.match}%</span>
-                        ) : (
-                          <span className="text-[12px] text-[#86868B] font-medium">{opp.match}%</span>
-                        )}
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-[6px] h-[6px] rounded-full bg-[#007AFF]" />
-                          <span className="text-[12px] text-[#007AFF] font-medium">真人接管</span>
-                        </div>
-                      </div>
-                    </div>
-                    <p className="text-[13px] text-[#86868B] mb-3">{opp.team} · {opp.salary}</p>
-                    {opp.milestone && (
-                      <p className="text-[14px] font-medium text-[#1D1D1F] leading-[1.5] mb-2">{opp.milestone}</p>
-                    )}
-                    {opp.agentTip && (
-                      <div>
-                        <p className="text-[11px] text-[#C7C7CC] mb-1">Agent 参谋</p>
-                        <p className="text-[13px] text-[#86868B] leading-[1.6]">{opp.agentTip}</p>
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              );
-
-              /* ── DEAD_END ── */
-              if (opp.state === "DEAD_END") return (
-                <motion.div key={opp.id} className="bg-white rounded-2xl overflow-hidden mb-3 opacity-55 cursor-pointer" style={{ boxShadow: "0 1px 8px rgba(0,0,0,0.03)" }} whileTap={{ scale: 0.98 }} onClick={() => router.push(`/dashboard/chat/${opp.id}`)}>
-                  <div className="px-5 py-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <p className="text-[16px] font-medium text-[#86868B] tracking-tight">{opp.company}</p>
-                      <div className="flex items-center gap-1.5">
-                        <div className="w-[6px] h-[6px] rounded-full bg-[#C7C7CC]" />
-                        <span className="text-[12px] text-[#C7C7CC] font-medium">已出局</span>
-                      </div>
-                    </div>
-                    <p className="text-[13px] text-[#C7C7CC] mb-2">{opp.team} · {opp.salary}</p>
-                    <p className="text-[13px] text-[#86868B] leading-[1.5]">{opp.deathCause}</p>
-                  </div>
-                </motion.div>
-              );
-
-              return null;
-            })}
+              <p className="text-[13px] text-[#1D1D1F]/60 leading-[1.5] mb-3">{job.aiReason}</p>
+              <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                {job.status === "new" && (
+                  <>
+                    <motion.button className="flex-1 h-[36px] rounded-xl bg-[#1D1D1F] text-white text-[13px] font-medium" style={{ boxShadow: "0 1px 6px rgba(0,0,0,0.1)" }} whileTap={{ scale: 0.97 }} onClick={() => handleInterested(job.id)}>感兴趣</motion.button>
+                    <motion.button className="h-[36px] px-4 rounded-xl text-[13px] font-medium text-[#8E8E93]" style={{ backgroundColor: "rgba(0,0,0,0.03)" }} whileTap={{ scale: 0.97 }} onClick={() => handlePass(job.id)}>跳过</motion.button>
+                  </>
+                )}
+                {job.status === "interested" && (
+                  <span className="text-[12px] text-[#32D74B] font-medium flex items-center gap-1"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#32D74B" strokeWidth="2.5"><path d="M20 6 9 17l-5-5"/></svg>已关注</span>
+                )}
+                {job.status === "chatting" && (
+                  <span className="text-[12px] text-[#007AFF] font-medium flex items-center gap-1">
+                    <div className="w-[5px] h-[5px] rounded-full bg-[#007AFF]" />沟通中
+                  </span>
+                )}
+              </div>
+            </div>
           </motion.div>
-        </AnimatePresence>
+        ))}
+        {filtered.filter(j => j.status !== "passed").length === 0 && (
+          <div className="flex flex-col items-center py-16"><p className="text-[14px] text-[#AEAEB2]">暂无相关机会</p></div>
+        )}
       </div>
     </div>
   );
 }
 
 /* ============ Tab 2: Agent Chat ============ */
-function AgentChatPage({ prefillMessage = "", onClearPrefill }: { prefillMessage?: string; onClearPrefill?: () => void }) {
-  const [msgs] = useState<{ id: number; role: string; text: string }[]>([
-    { id: 1, role: "agent", text: "你好，我是你的数字分身经纪人。目前已经在 4 个平台上帮你搜索和沟通了。有什么需要我特别注意的吗？" },
-    { id: 2, role: "user", text: "字节那个岗位怎么样？帮我重点跟进一下。" },
-    { id: 3, role: "agent", text: "字节商业化团队那个岗位匹配度 95%，我已经和 HR 聊了两轮。对方很积极，确认双休和弹性工时。下一步建议安排线上面试，你看可以吗？" },
-    { id: 4, role: "user", text: "可以，帮我安排吧。另外薪资谈判的时候，不要低于 28k。" },
-    { id: 5, role: "agent", text: "收到。我已更新你的薪资底线为 28k（针对字节这个岗位）。面试已授权安排，我会协调具体时间并通知你。" },
-    { id: 6, role: "agent", text: "给你汇报一下美团的情况：对方 base 上限给到 23k，和你的预期有差距。我整理了一份市场对标分析，建议用「同级别 offer 竞争」策略争取，你觉得可以这样推进吗？" },
-    { id: 7, role: "user", text: "可以试试，如果谈不上来就算了。" },
-    { id: 8, role: "agent", text: "明白，我会先试一轮。另外蚂蚁那边 HR 追问了离职原因，我帮你拟了一版回复草稿，放在概览页了，你有空审核一下。" },
-    { id: 9, role: "user", text: "好的，我去看看。" },
-  ]);
-  const [inputValue, setInputValue] = useState(prefillMessage);
-  const endRef = useRef<HTMLDivElement>(null);
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
-  useEffect(() => {
-    if (prefillMessage) {
-      setInputValue(prefillMessage);
-      onClearPrefill?.();
-    }
-  }, [prefillMessage, onClearPrefill]);
+/* ============ Tab 2: Messages ============ */
+function MessageListPage({ threads }: { threads: ChatThread[] }) {
+  const router = useRouter();
+  const totalUnread = threads.reduce((s, t) => s + t.unread, 0);
 
   return (
-    <div className="flex flex-col h-screen bg-[#FAFAFA] relative">
-      <div className="sticky top-0 z-30 backdrop-blur-xl bg-white/80 border-b border-gray-100 px-5 pt-14 pb-4 flex items-center gap-3">
-        <div className="w-9 h-9 rounded-full bg-black flex items-center justify-center"><span className="text-[13px] font-semibold text-white">A</span></div>
-        <div>
-          <p className="text-[16px] font-semibold text-[#1D1D1F]">我的经纪人</p>
-          <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 bg-[#34C759] rounded-full" /><span className="text-[12px] text-[#34C759]">在线 · 正在处理 3 个任务</span></div>
+    <div className="flex flex-col h-screen bg-[#F5F5F7]">
+      <div className="sticky top-0 z-30 flex-shrink-0" style={{ background: "rgba(255,255,255,0.88)", backdropFilter: "blur(40px) saturate(180%)", WebkitBackdropFilter: "blur(40px) saturate(180%)" }}>
+        <div className="h-14" />
+        <div className="px-5 pb-3 flex items-center justify-between">
+          <h1 className="text-[22px] font-semibold text-[#1D1D1F] tracking-tight">消息</h1>
+          {totalUnread > 0 && <span className="text-[12px] text-[#8E8E93]">{totalUnread} 条未读</span>}
         </div>
+        <div className="h-[1px] bg-gradient-to-r from-transparent via-black/[0.06] to-transparent" />
       </div>
-      <div className="flex-1 overflow-y-auto px-5 pt-5 pb-36 space-y-4">
-        {msgs.map((msg) => {
-          return (
-            <motion.div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-              {msg.role === "agent" ? (
-                <div className="bg-[#F5F5F7] text-[#1D1D1F] rounded-2xl rounded-tl-sm px-4 py-3 max-w-[85%]"><p className="text-[15px] leading-relaxed">{msg.text}</p></div>
-              ) : (
-                <div className="bg-black text-white rounded-2xl rounded-tr-sm px-4 py-3 max-w-[80%]"><p className="text-[15px] leading-relaxed">{msg.text}</p></div>
-              )}
-            </motion.div>
-          );
-        })}
-        <div ref={endRef} />
-      </div>
-      {/* Input - 固定在底部 Tab 栏上方 */}
-      <div className="absolute bottom-[68px] left-0 right-0 px-4 pb-2 pt-3 bg-gradient-to-t from-[#FAFAFA] via-[#FAFAFA]/95 to-transparent z-30">
-        <div className="flex items-center gap-3 bg-white rounded-2xl border border-gray-100 px-4 py-3" style={{ boxShadow: "0 8px 30px rgb(0,0,0,0.04)" }}>
-          <input type="text" placeholder="给经纪人下达指令..." className="flex-1 text-[15px] text-[#1D1D1F] placeholder-[#86868B] bg-transparent outline-none" value={inputValue} onChange={e => setInputValue(e.target.value)} />
-          <button className="w-8 h-8 bg-black rounded-full flex items-center justify-center flex-shrink-0">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M12 19V5" /><path d="m5 12 7-7 7 7" /></svg>
-          </button>
-        </div>
+
+      <div className="flex-1 overflow-y-auto pb-24">
+        {threads.map((thread, i) => (
+          <motion.button key={thread.id} className={`w-full flex items-center gap-3.5 px-5 py-3.5 text-left ${i < threads.length - 1 ? "border-b border-black/[0.04]" : ""}`} whileTap={{ backgroundColor: "rgba(0,0,0,0.02)" }} onClick={() => router.push(`/dashboard/chat/${thread.id}`)}>
+            {/* Avatar */}
+            <div className="w-[48px] h-[48px] rounded-2xl flex items-center justify-center flex-shrink-0" style={{ backgroundColor: thread.color + "15" }}>
+              <span className="text-[18px] font-bold" style={{ color: thread.color }}>{thread.initial}</span>
+            </div>
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between mb-0.5">
+                <p className="text-[15px] font-semibold text-[#1D1D1F] tracking-tight truncate">{thread.company}</p>
+                <span className="text-[11px] text-[#AEAEB2] flex-shrink-0 ml-2">{thread.lastTime}</span>
+              </div>
+              <p className="text-[11px] text-[#8E8E93] mb-0.5">{thread.team}</p>
+              <div className="flex items-center justify-between">
+                <p className="text-[13px] text-[#8E8E93] truncate flex-1">{thread.lastMessage}</p>
+                {thread.unread > 0 && (
+                  <span className="flex-shrink-0 ml-2 min-w-[18px] h-[18px] bg-[#FF3B30] rounded-full text-[10px] text-white font-medium flex items-center justify-center px-1">{thread.unread}</span>
+                )}
+              </div>
+            </div>
+          </motion.button>
+        ))}
+        {threads.length === 0 && (
+          <div className="flex flex-col items-center py-20"><p className="text-[14px] text-[#AEAEB2]">暂无消息</p></div>
+        )}
       </div>
     </div>
   );
@@ -1367,19 +1516,12 @@ function DashboardInner() {
   const incomplete = searchParams.get("incomplete") === "1";
 
   const [activeTab, setActiveTab] = useState(0);
-  const [chatPrefill, setChatPrefill] = useState("");
   const [inboxTasks, setInboxTasks] = useState<InboxTask[]>(initialInboxTasks);
-  const [opps] = useState<Opportunity[]>(initialOpps);
 
   const pendingCount = inboxTasks.filter(t => t.type !== "INFO_REPORT").length;
 
-  const handleSwitchToChat = (prefill?: string) => {
-    if (prefill) setChatPrefill(prefill);
-    setActiveTab(2);
-  };
-
   const handleContinueSetup = () => {
-    router.push("/preview/assign");
+    router.push("/onboarding/upload");
   };
 
   const handleDismissTask = (id: number) => {
@@ -1391,17 +1533,17 @@ function DashboardInner() {
       switch (activeTab) {
         case 0: return <IncompleteOverview onContinue={handleContinueSetup} />;
         case 1: return <IncompleteOpportunities onContinue={handleContinueSetup} />;
-        case 2: return <AgentChatPage prefillMessage={chatPrefill} onClearPrefill={() => setChatPrefill("")} />;
+        case 2: return <MessageListPage threads={initialChatThreads} />;
         case 3: return <IncompleteAssets onContinue={handleContinueSetup} />;
         default: return <IncompleteOverview onContinue={handleContinueSetup} />;
       }
     }
     switch (activeTab) {
-      case 0: return <OverviewPage onSwitchToChat={handleSwitchToChat} inboxTasks={inboxTasks} onDismissTask={handleDismissTask} />;
-      case 1: return <OpportunitiesFeed opps={opps} inboxTasks={inboxTasks} onDismissTask={handleDismissTask} />;
-      case 2: return <AgentChatPage prefillMessage={chatPrefill} onClearPrefill={() => setChatPrefill("")} />;
+      case 0: return <OverviewPage inboxTasks={inboxTasks} onDismissTask={handleDismissTask} />;
+      case 1: return <RecommendedJobsFeed jobs={initialRecommendedJobs} />;
+      case 2: return <MessageListPage threads={initialChatThreads} />;
       case 3: return <AssetPage />;
-      default: return <OverviewPage onSwitchToChat={handleSwitchToChat} inboxTasks={inboxTasks} onDismissTask={handleDismissTask} />;
+      default: return <OverviewPage inboxTasks={inboxTasks} onDismissTask={handleDismissTask} />;
     }
   };
   return (

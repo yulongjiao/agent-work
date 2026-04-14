@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { User, Building2, ArrowRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 const smooth = { duration: 1, ease: [0.32, 0.72, 0, 1] as const };
@@ -10,17 +9,29 @@ const smooth = { duration: 1, ease: [0.32, 0.72, 0, 1] as const };
 export default function LandingPage() {
   const router = useRouter();
   const [phase, setPhase] = useState(0);
+  const navigated = useRef(false);
+
+  const goLogin = () => {
+    if (navigated.current) return;
+    navigated.current = true;
+    router.push("/login");
+  };
 
   useEffect(() => {
     const t1 = setTimeout(() => setPhase(1), 2000);
-    const t2 = setTimeout(() => setPhase(2), 2800);
+    const t2 = setTimeout(() => goLogin(), 3500);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []);
+
+  const skipToLogin = () => {
+    setPhase(1);
+    setTimeout(() => goLogin(), 200);
+  };
 
   const landed = phase >= 1;
 
   return (
-    <div className="relative min-h-screen overflow-hidden">
+    <div className="relative min-h-screen overflow-hidden" onClick={skipToLogin}>
       {/* ── 背景 ── */}
       <motion.div
         className="absolute inset-0"
@@ -47,7 +58,7 @@ export default function LandingPage() {
         <motion.div
           className="flex flex-col items-center w-full"
           initial={{ paddingTop: 280 }}
-          animate={{ paddingTop: landed ? 100 : 280 }}
+          animate={{ paddingTop: landed ? 200 : 280 }}
           transition={{ ...smooth }}
         >
           {/* Logo */}
@@ -57,9 +68,9 @@ export default function LandingPage() {
             animate={{
               scale: 1,
               rotate: 0,
-              width: landed ? 52 : 80,
-              height: landed ? 52 : 80,
-              borderRadius: landed ? 15 : 22,
+              width: landed ? 60 : 80,
+              height: landed ? 60 : 80,
+              borderRadius: landed ? 18 : 22,
               backgroundColor: landed ? "#1D1D1F" : "rgba(255,255,255,0.07)",
               boxShadow: landed ? "0 6px 24px rgba(0,0,0,0.15)" : "0 0px 0px rgba(0,0,0,0)",
             }}
@@ -71,7 +82,7 @@ export default function LandingPage() {
             <motion.span
               className="font-bold tracking-tighter text-white"
               initial={{ opacity: 0, fontSize: "32px" }}
-              animate={{ opacity: 1, fontSize: landed ? "20px" : "32px" }}
+              animate={{ opacity: 1, fontSize: landed ? "24px" : "32px" }}
               transition={{ delay: phase === 0 ? 0.45 : 0, ...smooth }}
             >
               A.
@@ -109,55 +120,6 @@ export default function LandingPage() {
           >
             重塑你的职业连接
           </motion.p>
-        </motion.div>
-
-        {/* ── 角色选择 ── */}
-        <motion.div
-          className="w-full flex flex-col gap-4 mt-12"
-          initial={{ opacity: 0, y: 60 }}
-          animate={{
-            opacity: phase >= 2 ? 1 : 0,
-            y: phase >= 2 ? 0 : 60,
-          }}
-          transition={{ duration: 0.7, ease: [0.32, 0.72, 0, 1] }}
-          style={{ pointerEvents: phase >= 2 ? "auto" : "none" }}
-        >
-          <motion.div
-            className="w-full bg-white rounded-3xl border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6 cursor-pointer"
-            whileTap={{ scale: 0.97 }}
-            onClick={() => router.push("/preview/assign")}
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex items-start gap-4">
-                <div className="w-11 h-11 rounded-xl bg-[#F5F5F7] flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <User size={20} strokeWidth={1.5} className="text-[#1D1D1F]" />
-                </div>
-                <div>
-                  <h3 className="text-[17px] font-semibold text-[#1D1D1F]">我是求职者</h3>
-                  <p className="text-[14px] text-[#86868B] mt-1.5 leading-relaxed">托管职业机会，让 AI 经纪人替你谈。</p>
-                </div>
-              </div>
-              <ArrowRight size={18} className="text-[#86868B] mt-2 flex-shrink-0" strokeWidth={1.5} />
-            </div>
-          </motion.div>
-
-          <motion.div
-            className="w-full bg-[#F5F5F7] rounded-3xl border border-gray-100 shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-6 cursor-pointer"
-            whileTap={{ scale: 0.97 }}
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex items-start gap-4">
-                <div className="w-11 h-11 rounded-xl bg-white flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <Building2 size={20} strokeWidth={1.5} className="text-[#1D1D1F]" />
-                </div>
-                <div>
-                  <h3 className="text-[17px] font-semibold text-[#1D1D1F]">我是招聘方</h3>
-                  <p className="text-[14px] text-[#86868B] mt-1.5 leading-relaxed">发布用人意图，获取精准人才镜像。</p>
-                </div>
-              </div>
-              <ArrowRight size={18} className="text-[#86868B] mt-2 flex-shrink-0" strokeWidth={1.5} />
-            </div>
-          </motion.div>
         </motion.div>
 
         {/* ── 底部加载指示 ── */}

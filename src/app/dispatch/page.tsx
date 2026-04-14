@@ -53,7 +53,14 @@ export default function DispatchPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#FAFAFA]">
+    <div className="flex flex-col min-h-screen bg-[#FAFAFA] relative">
+      <motion.button
+        className="absolute top-14 left-5 w-8 h-8 flex items-center justify-center rounded-full bg-black/[0.04] z-20"
+        whileTap={{ scale: 0.9 }}
+        onClick={() => router.back()}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1D1D1F" strokeWidth="2"><path d="m15 18-6-6 6-6" /></svg>
+      </motion.button>
       {/* 上半部：状态确认 */}
       <div className="flex-1 flex flex-col items-center justify-center px-8 pt-16 pb-4">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center w-full">
@@ -111,7 +118,7 @@ export default function DispatchPage() {
             onTouchEnd={endHold}
           />
         </div>
-        <p className="text-[11px] text-[#C7C7CC] text-center mt-4">启动后 24/7 持续运转，有进展即时通知</p>
+        <p className="text-[11px] text-[#C7C7CC] text-center mt-4">长按上方按钮直到 100% 即可启动 · 启动后 24/7 持续运转</p>
       </motion.div>
     </div>
   );
