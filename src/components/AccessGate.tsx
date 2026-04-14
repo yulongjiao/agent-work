@@ -70,7 +70,7 @@ export default function AccessGate({ children }: { children: React.ReactNode }) 
         className="w-full max-w-[300px]"
       >
         <p className="text-white/80 text-[15px] text-center mb-6 font-medium">
-          你在公司里的名字叫什么？
+          老板在公司里的名字叫什么？
         </p>
 
         <motion.div
