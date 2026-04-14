@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 
 const smooth = { duration: 1, ease: [0.32, 0.72, 0, 1] as const };
 
-export default function LandingPage() {
+export default function EmployerLandingPage() {
   const router = useRouter();
   const [phase, setPhase] = useState(0);
   const navigated = useRef(false);
@@ -14,7 +14,7 @@ export default function LandingPage() {
   const goLogin = () => {
     if (navigated.current) return;
     navigated.current = true;
-    router.push("/login");
+    router.push("/employer/login");
   };
 
   useEffect(() => {
@@ -32,52 +32,39 @@ export default function LandingPage() {
 
   return (
     <div className="relative min-h-screen overflow-hidden" onClick={skipToLogin}>
-      {/* ── 背景 ── */}
       <motion.div
         className="absolute inset-0"
         initial={{ backgroundColor: "#1D1D1F" }}
         animate={{ backgroundColor: landed ? "#FAFAFA" : "#1D1D1F" }}
         transition={{ ...smooth }}
       />
-
-      {/* ── 光晕 ── */}
       <motion.div
         className="absolute top-[280px] left-1/2 -translate-x-1/2 w-[320px] h-[320px] rounded-full pointer-events-none"
-        style={{ background: "radial-gradient(circle, rgba(52,199,89,0.15) 0%, transparent 70%)" }}
+        style={{ background: "radial-gradient(circle, rgba(0,122,255,0.15) 0%, transparent 70%)" }}
         animate={{
           scale: landed ? 3 : [1, 1.15, 1],
           opacity: landed ? 0 : [0.5, 0.9, 0.5],
         }}
         transition={landed ? { ...smooth } : { duration: 3, repeat: Infinity, ease: "easeInOut" }}
       />
-
-      {/* ── 主内容 ── */}
       <div className="relative z-10 flex flex-col items-center min-h-screen px-6">
-
-        {/* ── Logo + 品牌 ── */}
         <motion.div
           className="flex flex-col items-center w-full"
           initial={{ paddingTop: 280 }}
           animate={{ paddingTop: landed ? 200 : 280 }}
           transition={{ ...smooth }}
         >
-          {/* Logo */}
           <motion.div
             className="flex items-center justify-center overflow-hidden"
             initial={{ scale: 0, rotate: -180, width: 80, height: 80, borderRadius: 22 }}
             animate={{
-              scale: 1,
-              rotate: 0,
-              width: landed ? 60 : 80,
-              height: landed ? 60 : 80,
+              scale: 1, rotate: 0,
+              width: landed ? 60 : 80, height: landed ? 60 : 80,
               borderRadius: landed ? 18 : 22,
               backgroundColor: landed ? "#1D1D1F" : "rgba(255,255,255,0.07)",
               boxShadow: landed ? "0 6px 24px rgba(0,0,0,0.15)" : "0 0px 0px rgba(0,0,0,0)",
             }}
-            transition={phase === 0
-              ? { type: "spring", stiffness: 180, damping: 18, delay: 0.15 }
-              : { ...smooth }
-            }
+            transition={phase === 0 ? { type: "spring", stiffness: 180, damping: 18, delay: 0.15 } : { ...smooth }}
           >
             <motion.span
               className="font-bold tracking-tighter text-white"
@@ -88,14 +75,11 @@ export default function LandingPage() {
               A.
             </motion.span>
           </motion.div>
-
-          {/* 品牌名 */}
           <motion.h1
             className="font-semibold tracking-tight"
             initial={{ opacity: 0, y: 20 }}
             animate={{
-              opacity: 1,
-              y: 0,
+              opacity: 1, y: 0,
               fontSize: landed ? "28px" : "24px",
               color: landed ? "#1D1D1F" : "#ffffff",
               marginTop: landed ? 16 : 24,
@@ -104,8 +88,6 @@ export default function LandingPage() {
           >
             Agent.Work
           </motion.h1>
-
-          {/* Slogan */}
           <motion.p
             className="text-center"
             initial={{ opacity: 0 }}
@@ -118,11 +100,9 @@ export default function LandingPage() {
             }}
             transition={{ delay: phase === 0 ? 0.9 : 0, ...smooth }}
           >
-            重塑你的职业连接
+            AI 招聘助理 · 精准锁定人才
           </motion.p>
         </motion.div>
-
-        {/* ── 底部加载指示 ── */}
         <motion.div
           className="absolute bottom-16 flex items-center gap-1.5"
           initial={{ opacity: 0 }}
@@ -138,8 +118,6 @@ export default function LandingPage() {
             />
           ))}
         </motion.div>
-
-
       </div>
     </div>
   );

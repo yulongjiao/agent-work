@@ -23,7 +23,11 @@ export default function SetupPage() {
   const [posInput, setPosInput] = useState("");
   const navigated = useRef(false);
 
-  const handleRole = () => {
+  const handleRole = (role: "seeker" | "employer") => {
+    if (role === "employer") {
+      router.push("/employer/onboarding/setup");
+      return;
+    }
     setStep("city");
   };
 
@@ -71,7 +75,7 @@ export default function SetupPage() {
                   className="w-full bg-white rounded-2xl p-5 text-left"
                   style={{ boxShadow: "0 2px 16px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.04)" }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => handleRole()}
+                  onClick={() => handleRole("seeker")}
                 >
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-[#F5F5F7] flex items-center justify-center flex-shrink-0">
@@ -89,7 +93,7 @@ export default function SetupPage() {
                   className="w-full bg-white rounded-2xl p-5 text-left"
                   style={{ boxShadow: "0 2px 16px rgba(0,0,0,0.04), 0 0 0 0.5px rgba(0,0,0,0.04)" }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => handleRole()}
+                  onClick={() => handleRole("employer")}
                 >
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-[#F5F5F7] flex items-center justify-center flex-shrink-0">

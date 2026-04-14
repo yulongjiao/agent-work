@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent.Work 产品流程</title>
+<style>
+  :root { --bg: #FAFAFA; --card: #fff; --text: #1D1D1F; --sub: #86868B; --muted: #AEAEB2; --border: #E5E5EA; --blue: #007AFF; --green: #34C759; --orange: #FF9500; --red: #FF3B30; --purple: #5856D6; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif; background: var(--bg); color: var(--text); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+
+  /* Layout */
+  .container { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+  .hero { background: linear-gradient(135deg, #1D1D1F 0%, #2C2C2E 100%); color: white; padding: 80px 0 60px; text-align: center; }
+  .hero h1 { font-size: 36px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 12px; }
+  .hero .badge { display: inline-block; padding: 4px 14px; border-radius: 20px; background: rgba(255,255,255,0.1); font-size: 13px; color: rgba(255,255,255,0.6); margin-bottom: 20px; }
+  .hero p { font-size: 17px; color: rgba(255,255,255,0.6); max-width: 520px; margin: 0 auto; }
+
+  section { padding: 48px 0; }
+  section h2 { font-size: 24px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 8px; }
+  section .section-desc { font-size: 15px; color: var(--sub); margin-bottom: 28px; }
+
+  /* Overview Grid */
+  .overview-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .overview-card { background: var(--card); border-radius: 16px; padding: 24px; box-shadow: 0 1px 8px rgba(0,0,0,0.04); border: 0.5px solid rgba(0,0,0,0.04); }
+  .overview-card h3 { font-size: 17px; font-weight: 600; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+  .overview-card p { font-size: 13px; color: var(--sub); }
+  .overview-card .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+  /* Flow */
+  .flow-section { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+  .flow-column { }
+  .flow-column h3 { font-size: 18px; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+  .flow-column .flow-sub { font-size: 13px; color: var(--sub); margin-bottom: 20px; }
+
+  .flow-phase { margin-bottom: 24px; }
+  .flow-phase-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 10px; padding-left: 2px; }
+
+  .flow-step { position: relative; padding-left: 28px; margin-bottom: 2px; }
+  .flow-step::before { content: ''; position: absolute; left: 7px; top: 22px; bottom: -2px; width: 1px; background: var(--border); }
+  .flow-step:last-child::before { display: none; }
+  .flow-step .node { position: absolute; left: 0; top: 6px; width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border); background: var(--card); }
+  .flow-step .node.active { border-color: var(--blue); background: var(--blue); }
+  .flow-step .node.active::after { content: ''; position: absolute; inset: 3px; border-radius: 50%; background: white; }
+  .flow-step .node.split { border-color: var(--orange); background: var(--orange); }
+  .flow-step .node.split::after { content: ''; position: absolute; inset: 3px; border-radius: 50%; background: white; }
+  .flow-step .node.final { border-color: var(--green); background: var(--green); }
+  .flow-step .node.final::after { content: ''; position: absolute; inset: 3px; border-radius: 50%; background: white; }
+
+  .step-card { background: var(--card); border-radius: 12px; padding: 12px 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.03); border: 0.5px solid rgba(0,0,0,0.04); margin-bottom: 8px; }
+  .step-card .route { font-size: 11px; font-family: "SF Mono", "Fira Code", monospace; color: var(--blue); background: rgba(0,122,255,0.06); padding: 2px 8px; border-radius: 6px; display: inline-block; margin-bottom: 4px; }
+  .step-card .route.employer { color: var(--purple); background: rgba(88,86,214,0.06); }
+  .step-card h4 { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+  .step-card p { font-size: 12px; color: var(--sub); line-height: 1.5; }
+  .step-card .features { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .step-card .tag { font-size: 10px; padding: 2px 8px; border-radius: 6px; background: rgba(0,0,0,0.03); color: var(--sub); font-weight: 500; }
+
+  /* Split indicator */
+  .split-indicator { background: linear-gradient(135deg, rgba(255,149,0,0.06), rgba(255,59,48,0.06)); border: 0.5px solid rgba(255,149,0,0.15); border-radius: 12px; padding: 14px 16px; margin: 16px 0; text-align: center; }
+  .split-indicator .label { font-size: 11px; font-weight: 600; color: var(--orange); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .split-indicator p { font-size: 13px; color: var(--text); }
+
+  /* Dashboard features */
+  .dashboard-section { margin-top: 48px; }
+  .tab-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+  .tab-card { background: var(--card); border-radius: 12px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.03); border: 0.5px solid rgba(0,0,0,0.04); }
+  .tab-card .tab-name { font-size: 13px; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+  .tab-card .tab-name .icon { width: 20px; height: 20px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 10px; color: white; font-weight: 700; }
+  .tab-card p { font-size: 12px; color: var(--sub); line-height: 1.5; }
+  .tab-card ul { margin-top: 6px; padding-left: 14px; }
+  .tab-card li { font-size: 11px; color: var(--sub); margin-bottom: 2px; }
+
+  /* Shared vs Unique */
+  .compare-row { display: grid; grid-template-columns: 160px 1fr 1fr; gap: 0; margin-bottom: 0; }
+  .compare-row.header { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; padding-bottom: 8px; border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+  .compare-row .label { font-size: 13px; font-weight: 500; padding: 8px 0; border-bottom: 0.5px solid rgba(0,0,0,0.04); }
+  .compare-row .val { font-size: 13px; color: var(--sub); padding: 8px 0; border-bottom: 0.5px solid rgba(0,0,0,0.04); }
+
+  /* Task types */
+  .task-types { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 16px; }
+  .task-type { background: var(--card); border-radius: 12px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.03); border: 0.5px solid rgba(0,0,0,0.04); }
+  .task-type .type-badge { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 8px; display: inline-block; margin-bottom: 8px; }
+  .task-type h4 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .task-type p { font-size: 12px; color: var(--sub); }
+
+  /* Chat anatomy */
+  .chat-anatomy { background: var(--card); border-radius: 16px; padding: 24px; box-shadow: 0 1px 8px rgba(0,0,0,0.04); margin-top: 16px; }
+  .msg-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+  .msg-row .sender { font-size: 11px; font-weight: 600; width: 80px; flex-shrink: 0; padding-top: 6px; }
+  .msg-bubble { padding: 8px 14px; border-radius: 14px; font-size: 13px; line-height: 1.5; max-width: 320px; }
+  .msg-bubble.ai-seeker { background: #F5F5F7; color: var(--text); border-bottom-left-radius: 4px; }
+  .msg-bubble.ai-employer { background: var(--text); color: white; border-bottom-right-radius: 4px; }
+  .msg-bubble.sys { background: rgba(255,149,0,0.06); color: var(--orange); font-size: 11px; border-radius: 20px; padding: 4px 14px; }
+
+  /* Approval panel */
+  .approval-demo { background: rgba(255,255,255,0.95); border-top: 1px solid var(--border); border-radius: 0 0 16px 16px; padding: 16px; }
+  .approval-badge { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+  .approval-badge .dot { width: 6px; height: 6px; border-radius: 50%; }
+  .approval-badge span { font-size: 11px; font-weight: 600; }
+  .approval-summary { font-size: 13px; font-weight: 600; margin-bottom: 10px; }
+  .approval-btns { display: flex; gap: 8px; }
+  .approval-btns .btn { flex: 1; height: 36px; border-radius: 12px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
+  .approval-btns .btn.primary { background: var(--text); color: white; }
+  .approval-btns .btn.secondary { background: rgba(0,0,0,0.04); color: var(--sub); }
+
+  /* Footer */
+  footer { text-align: center; padding: 40px 0; border-top: 1px solid var(--border); margin-top: 40px; }
+  footer p { font-size: 13px; color: var(--muted); }
+
+  @media (max-width: 640px) {
+    .overview-grid, .flow-section, .tab-grid, .task-types { grid-template-columns: 1fr; }
+    .compare-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="container">
+    <div class="badge">产品流程文档 v1.0</div>
+    <h1>Agent.Work</h1>
+    <p>双角色 AI 招聘平台 — 求职者的经纪人，企业的招聘助理。统一入口，角色分流，Agent 全程代理。</p>
+  </div>
+</div>
+
+<!-- 产品概述 -->
+<div class="container">
+<section>
+  <h2>产品架构</h2>
+  <p class="section-desc">统一 Landing + Login 入口，在 Setup 页通过身份选择分流到两条独立的用户路径</p>
+  <div class="overview-grid">
+    <div class="overview-card">
+      <h3><span class="dot" style="background: var(--green)"></span>求职者端 — AI 经纪人</h3>
+      <p>24h 全自动寻找机会、代理与 HR 沟通谈判、智能谈薪、隐私匿名保护。用户只需在关键决策节点做审批。</p>
+    </div>
+    <div class="overview-card">
+      <h3><span class="dot" style="background: var(--blue)"></span>企业端 — AI 招聘助理</h3>
+      <p>全网筛选候选人、主动触达沟通、面试协调安排。企业端流程终点为促成双方真人沟通，不含 Offer 环节。</p>
+    </div>
+  </div>
+</section>
+
+<!-- 身份分流 -->
+<section>
+  <div class="split-indicator">
+    <div class="label">身份分流点 — /onboarding/setup 第一屏</div>
+    <p>选择「找工作」→ 继续求职者 Onboarding &nbsp;&nbsp;|&nbsp;&nbsp; 选择「我是招聘方」→ 跳转 /employer/onboarding/setup</p>
+  </div>
+</section>
+
+<!-- 完整流程 -->
+<section>
+  <h2>完整用户流程</h2>
+  <p class="section-desc">左侧为求职者路径，右侧为企业端路径。共用入口后分流。</p>
+
+  <div class="flow-section">
+    <!-- 求职者流程 -->
+    <div class="flow-column">
+      <h3><span class="dot" style="background: var(--green); width: 10px; height: 10px; border-radius: 50%; display: inline-block;"></span>求职者流程</h3>
+      <p class="flow-sub">AI 经纪人全程代理求职沟通</p>
+
+      <div class="flow-phase">
+        <div class="flow-phase-title">入口</div>
+        <div class="flow-step"><div class="node active"></div><div class="step-card"><span class="route">/</span><h4>品牌 Landing</h4><p>3.5s 品牌动画，自动跳转或点击跳过</p></div></div>
+        <div class="flow-step"><div class="node"></div><div class="step-card"><span class="route">/login</span><h4>统一登录</h4><p>手机号 + 验证码登录。支持「暂不登录，先看看」直达 Dashboard</p></div></div>
+      </div>
+
+      <div class="flow-phase">
+        <div class="flow-phase-title">Onboarding</div>
+        <div class="flow-step"><div class="node split"></div><div class="step-card"><span class="route">/onboarding/setup</span><h4>身份 → 城市 → 职位</h4><p>三步多屏：选身份（分流点）→ 期望城市 → 期望职位方向</p><div class="features"><span class="tag">角色分流</span><span class="tag">快速选择</span><span class="tag">自定义输入</span></div></div></div>
+        <div class="flow-step"><div class="node"></div><div class="step-card"><span class="route">/onboarding/upload</span><h4>简历上传</h4><p>PDF/Word 上传，或跳过稍后补充</p></div></div>
+        <div class="flow-step"><div class="node"></div><div class="step-card"><span class="route">/onboarding/agent-hello</span><h4>经纪人上线欢迎</h4><p>5.5s 动画：Agent 头像 → 在线 → 初始化中。可点击跳过</p></div></div>
+        <div class="flow-step"><div class="node"></div><div class="step-card"><span class="route">/onboarding/deep-qa</span><h4>深度需求对齐</h4><p>Agent 对话：薪资底线、地点偏好、离职真因等。8 条消息自动播放</p></div></div>
+      </div>
+
+      <div class="flow-phase">
+        <div class="flow-phase-title">策略确认</div>
+        <div class="flow-step"><div class="node"></div><div class="step-card"><span class="route">/aha</span><h4>职业镜像 (AHA Moment)</h4><p>谈判锚点推演 + 优势提炼 + 2 项策略确认（需全部决策后继续）</p><div class="features"><span class="tag">市场数据</span><span class="tag">溢价系数</span><span class="tag">策略确认</span></div></div></div>
+        <div class="flow-step"><div class="node"></div><div class="step-card"><span class="route">/privacy</span><h4>Talent Shield 隐私保护</h4><p>屏蔽在职公司/前东家/关联子公司，匿名沟通保障</p></div></div>
+        <div class="flow-step"><div class="node"></div><div class="step-card"><span class="route">/dispatch</span><h4>长按启动 Agent</h4><p>长按 0→100% 进度填充启动经纪人，3s 后进入 Dashboard</p><div class="features"><span class="tag">代理沟通</span><span class="tag">精准筛选</span><span class="tag">全程辅助</span></div></div></div>
+      </div>
+
+      <div class="flow-phase">
+        <div class="flow-phase-title">主控看板</div>
+        <div class="flow-step"><div class="node final"></div><div class="step-card"><span class="route">/dashboard</span><h4>求职者 Dashboard</h4><p>4 Tab：首页（任务+Agent状态）、机会、消息、我的</p><div class="features"><span class="tag">?incomplete=1</span><span class="tag">任务审批</span><span class="tag">Agent 对话</span></div></div></div>
+        <div class="flow-step"><div class="node"></div><div class="step-card"><span class="route">/dashboard/chat/[id]</span><h4>对话详情</h4><p>Agent 与 HR 的沟通记录，支持真人介入、审批决策</p></div></div>
+      </div>
+    </div>
+
+    <!-- 企业端流程 -->
+    <div class="flow-column">
+      <h3><span class="dot" style="background: var(--blue); width: 10px; height: 10px; border-radius: 50%; display: inline-block;"></span>企业端流程</h3>
+      <p class="flow-sub">AI 招聘助理精准锁定人才</p>
+
+      <div class="flow-phase">
+        <div class="flow-phase-title">入口</div>
+        <div class="flow-step"><div class="node active"></div><div class="step-card"><span class="route employer">/employer</span><h4>企业 Landing</h4><p>蓝色品牌光晕，slogan「AI 招聘助理·精准锁定人才」</p></div></div>
+        <div class="flow-step"><div class="node"></div><div class="step-card"><span class="route employer">/employer/login</span><h4>企业登录</h4><p>与求职者登录结构一致，跳转企业端 Onboarding</p></div></div>
+      </div>
+
+      <div class="flow-phase">
+        <div class="flow-phase-title">Onboarding</div>
+        <div class="flow-step"><div class="node"></div><div class="step-card"><span class="route employer">/employer/onboarding/setup</span><h4>公司 → 团队 → 紧迫度</h4><p>三步多屏：公司信息（名称/行业/规模）→ 团队信息 → 招聘紧迫度</p><div class="features"><span class="tag">7个行业</span><span class="tag">4个规模</span><span class="tag">到岗时间</span></div></div></div>
+        <div class="flow-step"><div class="node"></div><div class="step-card"><span class="route employer">/employer/onboarding/upload</span><h4>JD 上传</h4><p>上传招聘 JD 文档，「正在理解招聘需求」解析提示</p></div></div>
+        <div class="flow-step"><div class="node"></div><div class="step-card"><span class="route employer">/employer/onboarding/agent-hello</span><h4>招聘助理上线欢迎</h4><p>「你的专属招聘助理已上线，正在理解你的招聘需求」</p></div></div>
+        <div class="flow-step"><div class="node"></div><div class="step-card"><span class="route employer">/employer/onboarding/deep-qa</span><h4>深度需求对齐</h4><p>Agent 对话：核心能力要求、薪资弹性、前任离职原因、不可接受特征等。9 条消息</p></div></div>
+      </div>
+
+      <div class="flow-phase">
+        <div class="flow-phase-title">策略确认</div>
+        <div class="flow-step"><div class="node"></div><div class="step-card"><span class="route employer">/employer/aha</span><h4>人才市场洞察 (Talent Mirror)</h4><p>供需分析 + 竞争力诊断 + 2 项策略确认（主动触达/薪资展示策略）</p><div class="features"><span class="tag">活跃简历数</span><span class="tag">竞争力排名</span><span class="tag">策略确认</span></div></div></div>
+        <div class="flow-step"><div class="node"></div><div class="step-card"><span class="route employer">/employer/privacy</span><h4>招聘信息保护</h4><p>竞品屏蔽、离职员工屏蔽、JD 脱敏、数据隔离、操作审计</p></div></div>
+        <div class="flow-step"><div class="node"></div><div class="step-card"><span class="route employer">/employer/dispatch</span><h4>长按启动招聘 Agent</h4><p>长按启动，3s 后进入企业 Dashboard</p><div class="features"><span class="tag">智能筛选</span><span class="tag">主动触达</span><span class="tag">面试协调</span></div></div></div>
+      </div>
+
+      <div class="flow-phase">
+        <div class="flow-phase-title">主控看板</div>
+        <div class="flow-step"><div class="node final"></div><div class="step-card"><span class="route employer">/employer/dashboard</span><h4>企业 Dashboard</h4><p>4 Tab：首页（任务+漏斗）、候选人（3 态）、沟通、岗位</p><div class="features"><span class="tag">帮我推进</span><span class="tag">候选人管理</span><span class="tag">岗位管理</span></div></div></div>
+        <div class="flow-step"><div class="node"></div><div class="step-card"><span class="route employer">/employer/dashboard/chat/[id]</span><h4>对话详情 + 审批面板</h4><p>查看 Agent 与候选人的沟通记录，底部审批面板直接完成决策</p></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Dashboard 功能详情 -->
+<section class="dashboard-section">
+  <h2>Dashboard 功能对比</h2>
+  <p class="section-desc">求职者 4 Tab vs 企业端 4 Tab</p>
+
+  <div class="tab-grid">
+    <div class="tab-card">
+      <div class="tab-name"><span class="icon" style="background: var(--green)">C</span>求职者 · 首页</div>
+      <p>AI Agent 工作时间线，与 Agent 对话交互</p>
+      <ul><li>待处理任务卡片（内联按钮操作）</li><li>Agent 工作状态和进度</li><li>任务嵌入对话时间线</li></ul>
+    </div>
+    <div class="tab-card">
+      <div class="tab-name"><span class="icon" style="background: var(--blue)">B</span>企业端 · 首页</div>
+      <p>招聘助理对话时间线，任务审批</p>
+      <ul><li>任务卡片嵌入对话流（可点击跳转详情）</li><li>引擎状态切换（积极/被动/停止）</li><li>招聘进度水球图</li></ul>
+    </div>
+    <div class="tab-card">
+      <div class="tab-name"><span class="icon" style="background: var(--green)">C</span>求职者 · 机会</div>
+      <p>AI 推荐的工作机会列表</p>
+      <ul><li>匹配度评分、推荐等级</li><li>AI 分析摘要、标签</li><li>机会状态管理</li></ul>
+    </div>
+    <div class="tab-card">
+      <div class="tab-name"><span class="icon" style="background: var(--blue)">B</span>企业端 · 候选人</div>
+      <p>三态候选人管理：新推荐 / 推进中 / 已结束</p>
+      <ul><li>候选人详情（AI 分析 + 能力雷达）</li><li>匹配度评分</li><li>快速操作按钮</li></ul>
+    </div>
+    <div class="tab-card">
+      <div class="tab-name"><span class="icon" style="background: var(--green)">C</span>求职者 · 消息</div>
+      <p>与各企业的聊天线程列表</p>
+      <ul><li>未读数标记</li><li>紧急/普通状态区分</li><li>Agent 代理/人工接管标识</li></ul>
+    </div>
+    <div class="tab-card">
+      <div class="tab-name"><span class="icon" style="background: var(--blue)">B</span>企业端 · 沟通</div>
+      <p>与各候选人的聊天线程列表</p>
+      <ul><li>需回复/Agent处理中/等待候选人</li><li>紧急标记</li><li>Agent 代理笔记</li></ul>
+    </div>
+    <div class="tab-card">
+      <div class="tab-name"><span class="icon" style="background: var(--green)">C</span>求职者 · 我的</div>
+      <p>个人资料和设置</p>
+    </div>
+    <div class="tab-card">
+      <div class="tab-name"><span class="icon" style="background: var(--blue)">B</span>企业端 · 岗位</div>
+      <p>岗位管理、漏斗数据、JD 编辑</p>
+      <ul><li>招聘中/已暂停/已关闭</li><li>候选人漏斗：投递→筛选→面试</li><li>Agent 理解摘要</li></ul>
+    </div>
+  </div>
+</section>
+
+<!-- 任务系统 -->
+<section>
+  <h2>任务审批系统</h2>
+  <p class="section-desc">Agent 运行中遇到需要用户/企业决策的节点时暂停，通过任务卡片请求审批</p>
+
+  <div class="task-types">
+    <div class="task-type">
+      <div class="type-badge" style="background: rgba(255,59,48,0.08); color: var(--red);">紧急决策</div>
+      <h4>URGENT_DECISION</h4>
+      <p>时间敏感，如候选人被竞品抢人、面试时间窗口即将关闭</p>
+    </div>
+    <div class="task-type">
+      <div class="type-badge" style="background: rgba(0,122,255,0.08); color: var(--blue);">待处理</div>
+      <h4>NEED_REPLY</h4>
+      <p>需要用户审核决策，如薪资谈判方案确认、HR 提出的关键问题</p>
+    </div>
+    <div class="task-type">
+      <div class="type-badge" style="background: rgba(255,149,0,0.08); color: var(--orange);">助理建议</div>
+      <h4>AGENT_SUGGESTION</h4>
+      <p>AI 建议但不符合原始条件，如经验不足但有特殊亮点的候选人</p>
+    </div>
+  </div>
+
+  <div style="margin-top: 24px;">
+    <h3 style="font-size: 15px; font-weight: 600; margin-bottom: 12px;">企业端审批闭环</h3>
+    <p style="font-size: 13px; color: var(--sub); margin-bottom: 12px;">首页任务卡片 → 点击跳转对话详情 → 查看聊天上下文 → 底部审批面板完成决策</p>
+    <div class="chat-anatomy">
+      <div style="font-size: 11px; color: var(--muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">对话详情页 · 审批面板示意</div>
+      <div class="msg-row"><span class="sender" style="color: var(--text)">B-Agent</span><div class="msg-bubble ai-employer">候选人一面表现很好，面试官反馈正面。已安排二面。</div></div>
+      <div class="msg-row"><span class="sender" style="color: var(--sub)">候选人</span><div class="msg-bubble ai-seeker">二面也通过了，但我同时收到了另一家的面试邀请，需要尽快确认。</div></div>
+      <div class="msg-row"><span class="sender" style="color: var(--orange)">系统</span><div class="msg-bubble sys">候选人正在被竞品抢人，建议尽快推进真人沟通</div></div>
+      <div class="approval-demo">
+        <div class="approval-badge"><span class="dot" style="background: var(--red)"></span><span style="color: var(--red)">紧急决策</span></div>
+        <div class="approval-summary">候选人正在被竞品抢人，需要在24小时内决定是否推进</div>
+        <div class="approval-btns">
+          <button class="btn secondary">我亲自谈</button>
+          <button class="btn primary">帮我推进</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 候选人状态 -->
+<section>
+  <h2>候选人状态生命周期</h2>
+  <p class="section-desc">企业端候选人三态模型，流程终点为促成双方真人沟通</p>
+  <div style="display: flex; align-items: center; gap: 16px; justify-content: center; padding: 24px 0;">
+    <div style="background: var(--card); border-radius: 12px; padding: 16px 24px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.04); border: 2px solid rgba(0,122,255,0.2);">
+      <div style="font-size: 22px; font-weight: 700; color: var(--blue);">new</div>
+      <div style="font-size: 12px; color: var(--sub); margin-top: 4px;">新推荐</div>
+    </div>
+    <svg width="32" height="16" viewBox="0 0 32 16" fill="none"><path d="M0 8h28m0 0l-6-6m6 6l-6 6" stroke="#AEAEB2" stroke-width="1.5"/></svg>
+    <div style="background: var(--card); border-radius: 12px; padding: 16px 24px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.04); border: 2px solid rgba(255,149,0,0.2);">
+      <div style="font-size: 22px; font-weight: 700; color: var(--orange);">ongoing</div>
+      <div style="font-size: 12px; color: var(--sub); margin-top: 4px;">推进中</div>
+    </div>
+    <svg width="32" height="16" viewBox="0 0 32 16" fill="none"><path d="M0 8h28m0 0l-6-6m6 6l-6 6" stroke="#AEAEB2" stroke-width="1.5"/></svg>
+    <div style="background: var(--card); border-radius: 12px; padding: 16px 24px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.04); border: 2px solid rgba(142,142,147,0.2);">
+      <div style="font-size: 22px; font-weight: 700; color: var(--sub);">ended</div>
+      <div style="font-size: 12px; color: var(--sub); margin-top: 4px;">已结束</div>
+    </div>
+  </div>
+</section>
+
+<!-- Incomplete 状态 -->
+<section>
+  <h2>Incomplete 状态（首次体验）</h2>
+  <p class="section-desc">用户未完成 Onboarding 时进入 /dashboard?incomplete=1，展示模拟演示数据吸引完成创建</p>
+  <div class="overview-grid">
+    <div class="overview-card">
+      <h3>展示内容</h3>
+      <ul style="padding-left: 16px; margin-top: 8px;">
+        <li style="font-size: 13px; color: var(--sub); margin-bottom: 4px;">市场漏斗数据（2847家企业 → 12个推荐）</li>
+        <li style="font-size: 13px; color: var(--sub); margin-bottom: 4px;">5 个模拟推荐岗位卡片</li>
+        <li style="font-size: 13px; color: var(--sub); margin-bottom: 4px;">AI 经纪人与 HR 的模拟对话预览</li>
+        <li style="font-size: 13px; color: var(--sub); margin-bottom: 4px;">能力亮点（SVG 图标卡片）</li>
+        <li style="font-size: 13px; color: var(--sub); margin-bottom: 4px;">社会证明（23,847人 · 94%满意度）</li>
+      </ul>
+    </div>
+    <div class="overview-card">
+      <h3>CTA 遮罩交互</h3>
+      <ul style="padding-left: 16px; margin-top: 8px;">
+        <li style="font-size: 13px; color: var(--sub); margin-bottom: 4px;">初始不显示遮罩，内容完全可滚动</li>
+        <li style="font-size: 13px; color: var(--sub); margin-bottom: 4px;">底部预留 50vh 空白空间</li>
+        <li style="font-size: 13px; color: var(--sub); margin-bottom: 4px;">IntersectionObserver 检测滚动位置</li>
+        <li style="font-size: 13px; color: var(--sub); margin-bottom: 4px;">到达底部时渐显遮罩 + CTA 按钮</li>
+        <li style="font-size: 13px; color: var(--sub); margin-bottom: 4px;">遮罩不覆盖实际内容</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 设计原则 -->
+<section>
+  <h2>核心设计原则</h2>
+  <p class="section-desc">贯穿产品全流程的设计决策</p>
+  <div class="overview-grid">
+    <div class="overview-card">
+      <h3>单一职责</h3>
+      <p>每个 Onboarding 页面只承载一个核心任务，不混合多个决策</p>
+    </div>
+    <div class="overview-card">
+      <h3>渐进式披露</h3>
+      <p>Setup 分多屏渐进展示，DeepQA 通过对话逐步深入</p>
+    </div>
+    <div class="overview-card">
+      <h3>Agent 赋能可视化</h3>
+      <p>每个流程阶段都展示 Agent 在帮用户思考的过程</p>
+    </div>
+    <div class="overview-card">
+      <h3>关键决策标记</h3>
+      <p>红色 Badge、系统提示、审批面板突出需要用户决策的时刻</p>
+    </div>
+    <div class="overview-card">
+      <h3>流畅自动跳转</h3>
+      <p>Upload→AgentHello→DeepQA 等自动衔接，减少手动操作</p>
+    </div>
+    <div class="overview-card">
+      <h3>长按启动仪式感</h3>
+      <p>Dispatch 页 0→100% 长按进度，提升启动决策的有意识度</p>
+    </div>
+  </div>
+</section>
+</div>
+
+<footer>
+  <p>Agent.Work — 产品流程文档</p>
+</footer>
+
+</body>
+</html>
